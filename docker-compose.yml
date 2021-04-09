@@ -1,0 +1,49 @@
+version: '3.7' 
+
+services:
+  db:
+    image: mongo
+    restart: always
+    networks:
+      - traefik-proxy
+    ports:
+      - "27017:27017"
+    volumes:
+      - "./data/db:/data/db"
+      - "./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
+      MONGO_INITDB_DATABASE: ${DATABASE}
+    labels:
+      - "traefik.enable=false"
+  api:
+    build: api
+    restart: always
+    environment:
+      MONGO_DB_USER: ${MONGO_DB_USER}
+      MONGO_DB_PASSWORD: ${MONGO_DB_PASSWORD}
+      DATABASE: ${DATABASE}
+      PORT: ${API_PORT}
+    networks:
+      - traefik-proxy
+    volumes:
+      - "./api:/app"
+      - "/app/node_modules"
+    command: "npm run dev"
+    labels:
+        # enable traefik auto discovery
+      - "traefik.enable=true"
+        # entry point for router
+      - "traefik.http.routers.api.entrypoints=websecure"
+        # rule which router will route requests from
+      - "traefik.http.routers.api.rule=Host(`api.${DOMAIN}`)"
+        # enable tls for router
+      - "traefik.http.routers.api.tls=true"
+        # specify cert resolver for router
+      - "traefik.http.routers.api.tls.certresolver=leresolver"
+        # tell service which port (in container) to route trafic to
+      - "traefik.http.services.api.loadbalancer.server.port=${API_PORT}"
+
+networks:
+    traefik-proxy:
