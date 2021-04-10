@@ -25,6 +25,10 @@ services:
       MONGO_DB_PASSWORD: ${MONGO_DB_PASSWORD}
       DATABASE: ${DATABASE}
       PORT: ${API_PORT}
+    ports:
+      - "5000:5000"
+    depends_on:
+        - "db"
     networks:
       - traefik-proxy
     volumes:

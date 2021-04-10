@@ -24,9 +24,9 @@ connection.once('open', () => {
   console.log("Connected to database");
 });
 
-//const postRouter = require('./routes/posts');
-//app.use('/posts', postRouter);
-
+// add routes for handling events
+const eventRouter = require('./routes/Events');
+app.use('/events', eventRouter);
 
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);

@@ -50,6 +50,6 @@ const userSchema = new Schema({
 
 userSchema.index({ "contact.countryCode": 1, "contact.phoneNumber": 1 }, { unique: true });
 
-const user = mongoose.model('User', userSchema);
+const User = mongoose.model('User', userSchema);
 
 module.exports = User;
