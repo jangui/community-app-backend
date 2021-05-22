@@ -1,6 +1,78 @@
 version: '3.7' 
 
 services:
+  traefik:
+    image: traefik:v2.2
+    command:
+      # enable web ui
+      - "--api.insecure=true"
+      # set provider to docker
+      - "--providers.docker=true"
+      #only expose containers with 'traefik.enable=true' label
+      - "--providers.docker.exposedbydefault=false"
+      # set entrypoints
+      - "--entryPoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # redirect http to https
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
+      # ACME (Let's Encrypt) auto SSL
+      - "--certificatesResolvers.leresolver.acme.email=${ACME_EMAIL}"
+      - "--certificatesResolvers.leresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesResolvers.leresolver.acme.tlsChallenge=true"
+      - "--certificatesResolvers.leresolver.acme.httpChallenge=true"
+      - "--certificatesResolvers.leresolver.acme.httpChallenge.entryPoint=web"
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - traefik-proxy
+    volumes:
+      # allow traefik to listen on docker socket
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      # Lets Encrypt
+      - "./data/letsencrypt/acme.json:/letsencrypt/acme.json"
+    labels:
+      - "traefik.http.routers.leresolver.tls.certresolver=tls"
+      # Redirect all HTTP to HTTPS permanently
+      - "traefik.http.routers.http_catchall.entrypoints=web"
+      - "traefik.http.routers.http_catchall.rule=HostRegexp(`{any:.+}`)"
+      - "traefik.http.routers.http_catchall.middlewares=https_redirect"
+      - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
+
+
+  frontend:
+    build: frontend
+    restart: always
+    stdin_open: true
+    networks:
+      - traefik-proxy
+    volumes:
+      - "./frontend:/app"
+      - "/app/node_modules"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=9000
+      - CHOKIDAR_USEPOLLING=true
+      - CI=true
+      - "REACT_APP_DOMAIN=${DOMAIN}"
+    labels:
+        # enable traefik auto discovery
+      - "traefik.enable=true"
+        # entry point for router
+      - "traefik.http.routers.web.entrypoints=websecure"
+        # rule which router will route requests from
+      - "traefik.http.routers.web.rule=Host(`${DOMAIN}`)"
+        # enable tls for router
+      - "traefik.http.routers.web.tls=true"
+        # specify cert resolver for router
+      - "traefik.http.routers.web.tls.certresolver=leresolver"
+        # tell service which port (in container) to route trafic to
+      - "traefik.http.services.web.loadbalancer.server.port=9000"
+
   db:
     image: mongo
     restart: always

@@ -45,6 +45,7 @@ const userSchema = new Schema({
     },
     county: String,
     city: String,
+    tags: [String],
 
 });
 
