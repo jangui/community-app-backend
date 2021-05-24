@@ -1,9 +1,18 @@
+import React, { Component } from 'react';
+import { BrowserRouter as Router, Route, Switch, Redirect } from 'react-router-dom';
 import logo from './logo.svg';
 import './App.css';
+import LandingPage from './LandingPage'
 
 function App() {
-  return (
-      <h1> hello world </h1>
+    return (
+        <><Router>
+            <Switch>
+                <Route exact path="/" component={ (props) => (
+                    <LandingPage  {...props}/>
+                )}/>
+            </Switch>
+      </Router></>
   );
 }
 
