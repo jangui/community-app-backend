@@ -5,4 +5,7 @@ export MONGO_DB_PASSWORD=""
 export MONGO_DB_PORT=""
 export DATABASE=""
 export API_PORT=""
+export PASSWORD_SALT=""
+export JWT_TOKEN_SECRET=""
+export JWT_EXPIRATION="2h"
 
