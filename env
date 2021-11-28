@@ -1,0 +1,8 @@
+export ACME_EMAIL=""
+export DOMAIN=""
+export MONGO_DB_USER=""
+export MONGO_DB_PASSWORD=""
+export MONGO_DB_PORT=""
+export DATABASE=""
+export API_PORT=""
+

@@ -3,26 +3,35 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
-    name: [{
-        firstName: {
-            type: String,
-            required: true,
-            trim: true,
-            minlength: 1,
-        },
-        lastName: {
-            type: String,
-            required: false,
-            trim: true,
-            minlength: 1,
-        }
-    }],
+    // username
+    userName: {
+        type: String,
+        required: true,
+        trim: true,
+        minlength: 1,
+        maxlength: 30,
+        unique: true,
+    },
+
+    // display name
+    name: {
+        type: String,
+        required: true,
+        trim: true,
+        minlength: 1,
+        maxlength: 30,
+    },
+    // instagram handle
     instagram: {
         type: String,
         required: false,
         trim: true,
-        minlength: 1
+        default: "",
+        minlength: 1,
+        maxlength: 30,
     },
+
+    // user's phone
     contact: [{
         countryCode: {
             type: String,
@@ -37,19 +46,34 @@ const userSchema = new Schema({
             match: [/^[0-9-(),]{6,14}$/, "Please use a valid phone number."],
         }
     }],
+
+    // user's email
     email: {
         type: String,
         trim: true,
         unique: true,
-        match: [/^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/, "Please use a valid email."]
+        match: [/^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/, "Please use a valid email."],
     },
-    county: String,
-    city: String,
-    tags: [String],
 
+    // profile picture save location
+    profilePicLocation: {
+        type: String,
+        required: false,
+        default: "", //TODO default save loc for default user pic
+    },
+
+    // array of Users which are friends
+    friends: [ this ],  // friends is a list of users aka 'this' model
+
+    // array of users which want to be friends
+    friendRequests: [ this ],
+
+    // array of communities we belong to
+    communities: {[type: mongoose.Schema.Types.ObjectId, ref: 'Community']},
+
+    // array of user's posts
+    posts: {[type: mongoose.Schema.Types.ObjectId, ref: 'Post']},
 });
-
-userSchema.index({ "contact.countryCode": 1, "contact.phoneNumber": 1 }, { unique: true });
 
 const User = mongoose.model('User', userSchema);
 

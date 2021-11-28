@@ -43,36 +43,6 @@ services:
       - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
       - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
 
-
-  frontend:
-    build: frontend
-    restart: always
-    stdin_open: true
-    networks:
-      - traefik-proxy
-    volumes:
-      - "./frontend:/app"
-      - "/app/node_modules"
-    environment:
-      - HOST=0.0.0.0
-      - PORT=9000
-      - CHOKIDAR_USEPOLLING=true
-      - CI=true
-      - "REACT_APP_DOMAIN=${DOMAIN}"
-    labels:
-        # enable traefik auto discovery
-      - "traefik.enable=true"
-        # entry point for router
-      - "traefik.http.routers.web.entrypoints=websecure"
-        # rule which router will route requests from
-      - "traefik.http.routers.web.rule=Host(`${DOMAIN}`)"
-        # enable tls for router
-      - "traefik.http.routers.web.tls=true"
-        # specify cert resolver for router
-      - "traefik.http.routers.web.tls.certresolver=leresolver"
-        # tell service which port (in container) to route trafic to
-      - "traefik.http.services.web.loadbalancer.server.port=9000"
-
   db:
     image: mongo
     restart: always
@@ -96,7 +66,7 @@ services:
       MONGO_DB_USER: ${MONGO_DB_USER}
       MONGO_DB_PASSWORD: ${MONGO_DB_PASSWORD}
       DATABASE: ${DATABASE}
-      PORT: ${API_PORT}
+      API_PORT: ${API_PORT}
     ports:
       - "5000:5000"
     depends_on:
