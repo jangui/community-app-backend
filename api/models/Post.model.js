@@ -3,16 +3,26 @@ const Schema = mongoose.Schema;
 
 const postSchema = new Schema({
     // user which made the post
-    owner: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+    owner: {type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true},
 
     // array of users that like the post
-    likes: {[type: mongoose.Schema.Types.ObjectId, ref: 'PostLike']},
+    likes: [{type: mongoose.Schema.Types.ObjectId, ref: 'PostLike'}],
 
     // array of comments on the post
-    comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'PostComment']},
+    comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'PostComment'}],
 
+    // post type: 0 == text post; 1 == picture post;
+    postType: {type: Number, min: 0, max: 1},
 
-    // TODO
+    // text for text post OR caption for picture post
+    text: {type: String, trim: true, required: false, minLength: 1, maxLength: 2000},
+
+    // picture save loc if picture post
+    pictureLocation: {type: String, trim: true, default: ""},
+
+    // location if picture post
+    location: {type: String, required: false, trim: true, default: ""},
+
 });
 
 const Post = mongoose.model('Post', postSchema);

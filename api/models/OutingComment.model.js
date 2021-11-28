@@ -10,7 +10,7 @@ const outingCommentSchema = new Schema({
     outing: {type: mongoose.Schema.Types.ObjectId, ref: 'Outing', index: true},
 
     // the user's comment
-    comment: {type: String, trim: true, minlength: 1, maxlength: 2000},
+    comment: {type: String, trim: true, minLength: 1, maxLength: 2000},
 
     // comment timestamp
     timestamp: {type: Date, default: Date.now()},

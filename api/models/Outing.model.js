@@ -24,13 +24,13 @@ const outingSchema = new Schema({
     visibleRSVP: {type: Boolean, default: true},
 
     // array of users that have RSVP'd
-    attendies: {[type: mongoose.Schema.Types.ObjectId, ref: 'User']},
+    attendies: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
 
     // array of users that are interested
-    interested: {[type: mongoose.Schema.Types.ObjectId, ref: 'User']},
+    interested: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
 
     // array of comments for the outing
-    comments: {[type: mongoose.Schema.Types.ObjectId, ref: 'OutingComment']},
+    comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingComment'}],
 });
 
 const Outing = mongoose.model('Outing', outingSchema);

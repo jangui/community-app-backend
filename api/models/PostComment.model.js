@@ -9,7 +9,11 @@ const postCommentSchema = new Schema({
     post: {type: mongoose.Schema.Types.ObjectId, ref: 'Post', index: true},
 
     // the user's comment
-    comment: {type: String, trim: true, minlength: 1, maxlength: 2000},
+    comment: {type: String, trim: true, minLength: 1, maxLength: 2000},
+
+    // comment timestamp
+    timestamp: {type: Date, default: Date.now()},
+
 });
 
 const PostComment = mongoose.model('PostComment', postCommentSchema);

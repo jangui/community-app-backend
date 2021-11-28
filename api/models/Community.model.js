@@ -8,7 +8,7 @@ const communitySchema = new Schema({
         type: String,
         required: true,
         trim: true,
-        minlength: 1
+        minLength: 1
         unique: true,
     },
 
@@ -38,16 +38,16 @@ const communitySchema = new Schema({
     memberVisibility: {type: Boolean, default: true},
 
     // array of community outings
-    outings: {[type: mongoose.Schema.Types.ObjectId, ref: 'Outing']},
+    outings: [{type: mongoose.Schema.Types.ObjectId, ref: 'Outing'}],
 
     // array of community owners (users)
-    owners: {[type: mongoose.Schema.Types.ObjectId, ref: 'User']},
+    owners: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
 
     // array of community members (users)
-    members: {[type: mongoose.Schema.Types.ObjectId, ref: 'User']},
+    members: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
 
     // array of users wanting to join community (only if private)
-    memberRequests: {[type: mongoose.Schema.Types.ObjectId, ref: 'User']},
+    memberRequests: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
 
 });
 

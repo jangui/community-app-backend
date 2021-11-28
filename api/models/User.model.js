@@ -4,13 +4,20 @@ const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
     // username
-    userName: {
+    username: {
         type: String,
         required: true,
         trim: true,
-        minlength: 1,
-        maxlength: 30,
+        minLength: 1,
+        maxLength: 30,
         unique: true,
+    },
+
+    // user's password
+    // passwords should be hashed before stored
+    password: {
+        type: String,
+        required: true,
     },
 
     // display name
@@ -18,8 +25,8 @@ const userSchema = new Schema({
         type: String,
         required: true,
         trim: true,
-        minlength: 1,
-        maxlength: 30,
+        minLength: 1,
+        maxLength: 30,
     },
     // instagram handle
     instagram: {
@@ -27,8 +34,8 @@ const userSchema = new Schema({
         required: false,
         trim: true,
         default: "",
-        minlength: 1,
-        maxlength: 30,
+        minLength: 1,
+        maxLength: 30,
     },
 
     // user's phone
@@ -69,10 +76,10 @@ const userSchema = new Schema({
     friendRequests: [ this ],
 
     // array of communities we belong to
-    communities: {[type: mongoose.Schema.Types.ObjectId, ref: 'Community']},
+    communities: [{type: mongoose.Schema.Types.ObjectId, ref: 'Community'}],
 
     // array of user's posts
-    posts: {[type: mongoose.Schema.Types.ObjectId, ref: 'Post']},
+    posts: [{type: mongoose.Schema.Types.ObjectId, ref: 'Post'}],
 });
 
 const User = mongoose.model('User', userSchema);
