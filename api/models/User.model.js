@@ -33,26 +33,23 @@ const userSchema = new Schema({
         type: String,
         required: false,
         trim: true,
-        default: "",
         minLength: 1,
         maxLength: 30,
     },
 
     // user's phone
-    contact: [{
-        countryCode: {
+    countryCode: {
             type: String,
             trim: true,
             required: [true, "Country Code is a required field."],
             match: [/^([1-9]{1}\-)?([0-9]{1,3})$/, "Please use a valid country code."],
-        },
-        phoneNumber: {
+    },
+    phoneNumber: {
             type: String,
             trim: true,
             required: [true, "Phone Number is a required field."],
             match: [/^[0-9-(),]{6,14}$/, "Please use a valid phone number."],
-        }
-    }],
+    },
 
     // user's email
     email: {
