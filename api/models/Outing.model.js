@@ -31,6 +31,9 @@ const outingSchema = new Schema({
 
     // array of comments for the outing
     comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingComment'}],
+
+    // outing poll that user can vote on
+    poll: {type: mongoose.Schema.Types.ObjectId, ref: 'OutingPoll'},
 });
 
 const Outing = mongoose.model('Outing', outingSchema);

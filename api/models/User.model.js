@@ -75,6 +75,9 @@ const userSchema = new Schema({
     // array of communities we belong to
     communities: [{type: mongoose.Schema.Types.ObjectId, ref: 'Community'}],
 
+    // array of communities which have sent us a request to join
+    communityRequests: [{type: mongoose.Schema.Types.ObjectId, ref: 'Community'}],
+
     // array of user's posts
     posts: [{type: mongoose.Schema.Types.ObjectId, ref: 'Post'}],
 });
