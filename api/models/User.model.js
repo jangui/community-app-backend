@@ -61,7 +61,7 @@ const userSchema = new Schema({
     // profile picture save location
     profilePicLocation: {
         type: String,
-        default: "", //TODO default save loc for default user pic
+        default: "",
     },
 
     // array of Users which are friends
@@ -78,7 +78,14 @@ const userSchema = new Schema({
 
     // array of user's posts
     posts: [{type: mongoose.Schema.Types.ObjectId, ref: 'Post'}],
+
+    // array of notifications
+    notifications: [{type: mongoose.Schema.Types.ObjectId, ref: 'Notification'}],
 });
+
+// add a compound unique index
+// this makes is that all user's country code + phone number's aggregate must be unique
+userSchema.index({countryCode: 1, phoneNumber: 1}, { unique: true });
 
 const User = mongoose.model('User', userSchema);
 

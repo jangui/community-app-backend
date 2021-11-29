@@ -17,11 +17,11 @@ const postSchema = new Schema({
     // text for text post OR caption for picture post
     text: {type: String, trim: true, minLength: 1, maxLength: 2000},
 
-    // picture save loc if picture post
-    pictureLocation: {type: String, trim: true, default: ""},
+    // location of post
+    postLocation: {type: String, trim: true, default: ""},
 
-    // location if picture post
-    location: {type: String, trim: true, default: ""},
+    // picture save loc (if applicable: photo posts only)
+    pictureLocation: {type: String, trim: true, default: ""},
 
 });
 

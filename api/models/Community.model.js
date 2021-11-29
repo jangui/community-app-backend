@@ -22,7 +22,7 @@ const communitySchema = new Schema({
     // community picture
     picLocation: {
         type: String,
-        default: "", //TODO default save loc for default community pic
+        default: "",
     },
 
     // community privacy
