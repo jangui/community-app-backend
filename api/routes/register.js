@@ -5,6 +5,27 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 
+/*
+ * POST /register endpoint
+ * Content: application/json
+ * data:
+ *   username or email or (countryCode and phoneNumber)
+ *   password
+ *
+ * Responses:
+ *   200:
+ *     content: application/json
+ *     data:
+ *       success: true
+ *       msg: A successful register message
+ *       token: JWT used for session
+ *       user: JSON of the mongoose document of user which registered
+ *   409 && 500:
+ *     content: application/json
+ *     data:
+ *       success: false
+ *       msg: an appropriate error message
+ */
 router.route('/').post( async (req, res) => {
     const username = req.body.username;
     const password = req.body.password;
@@ -43,13 +64,26 @@ router.route('/').post( async (req, res) => {
             });
         }
 
+        // check if phone taken
+        const existingPhone = await User.find({
+            countryCode: countryCode,
+            phoneNumber: phoneNumber,
+        });
+        if (existingPhone.length !== 0) {
+            res.status = 409;
+            return res.json({
+                'success': false,
+                'msg': 'Error: phone already in use',
+            });
+        }
+
         // hash password
-        hashedPassword = await bcrypt.hash(password, parseInt(process.env.PASSWORD_SALT));
+        hashedPassword = await bcrypt.hash(password, parseInt(process.env.SALT_ROUNDS));
 
         // save user to database
         const user = new User({
             username: username,
-            password: password,
+            password: hashedPassword,
             name: name,
             email: email,
             countryCode: countryCode,
@@ -64,6 +98,7 @@ router.route('/').post( async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRATION },
         );
 
+        // return success
         res.status = 200;
         return res.json({
             success: true,

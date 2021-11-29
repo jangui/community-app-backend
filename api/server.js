@@ -26,8 +26,11 @@ connection.once('open', () => {
 });
 
 // set up routes
-const register = require('./routes/register');
-app.use('/register', register);
+const registerRouter = require('./routes/register');
+app.use('/register', registerRouter);
+
+const loginRouter = require('./routes/login');
+app.use('/login', loginRouter);
 
 // start app
 app.listen(port, () => {
