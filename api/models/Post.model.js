@@ -15,13 +15,13 @@ const postSchema = new Schema({
     postType: {type: Number, min: 0, max: 1},
 
     // text for text post OR caption for picture post
-    text: {type: String, trim: true, required: false, minLength: 1, maxLength: 2000},
+    text: {type: String, trim: true, minLength: 1, maxLength: 2000},
 
     // picture save loc if picture post
     pictureLocation: {type: String, trim: true, default: ""},
 
     // location if picture post
-    location: {type: String, required: false, trim: true, default: ""},
+    location: {type: String, trim: true, default: ""},
 
 });
 

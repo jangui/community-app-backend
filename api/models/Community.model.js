@@ -15,7 +15,6 @@ const communitySchema = new Schema({
     // community description
     description: {
         type: String,
-        required: false,
         default: "",
         trim: true,
     },
@@ -23,7 +22,6 @@ const communitySchema = new Schema({
     // community picture
     picLocation: {
         type: String,
-        required: false,
         default: "", //TODO default save loc for default community pic
     },
 

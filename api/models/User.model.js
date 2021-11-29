@@ -31,7 +31,6 @@ const userSchema = new Schema({
     // instagram handle
     instagram: {
         type: String,
-        required: false,
         trim: true,
         minLength: 1,
         maxLength: 30,
@@ -62,7 +61,6 @@ const userSchema = new Schema({
     // profile picture save location
     profilePicLocation: {
         type: String,
-        required: false,
         default: "", //TODO default save loc for default user pic
     },
 
