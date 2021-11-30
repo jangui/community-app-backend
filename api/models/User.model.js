@@ -28,12 +28,15 @@ const userSchema = new Schema({
         minLength: 1,
         maxLength: 30,
     },
-    // instagram handle
-    instagram: {
+
+    // user's email
+    email: {
         type: String,
         trim: true,
-        minLength: 1,
-        maxLength: 30,
+        minLength: 5,
+        unique: true,
+        required: true,
+        match: [/^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/, "Please use a valid email."],
     },
 
     // user's phone
@@ -50,12 +53,13 @@ const userSchema = new Schema({
             match: [/^[0-9-(),]{6,14}$/, "Please use a valid phone number."],
     },
 
-    // user's email
-    email: {
+
+    // instagram handle
+    instagram: {
         type: String,
         trim: true,
-        unique: true,
-        match: [/^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/, "Please use a valid email."],
+        minLength: 1,
+        maxLength: 30,
     },
 
     // profile picture save location
