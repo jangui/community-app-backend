@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
+const { authUser } = require('./utils');
+
 // app setup
 const app = express();
 const port = process.env.API_PORT || 5000;
@@ -31,6 +33,9 @@ app.use('/register', registerRouter);
 
 const loginRouter = require('./routes/login');
 app.use('/login', loginRouter);
+
+const userRouter = require('./routes/user');
+app.use('/user', authUser, userRouter);
 
 // start app
 app.listen(port, () => {

@@ -1,8 +1,8 @@
 const router = require('express').Router();
+const bcrypt = require('bcrypt');
 
 const User = require('../models/User.model');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const { genAccessToken } = require('../utils');
 
 
 /*
@@ -38,8 +38,8 @@ router.route('/').post( async (req, res) => {
     if (!(username && password && name && (email || (countryCode && phoneNumber)))) {
         res.status = 400;
         return res.json({
-            'success': false,
-            'msg': 'Error: Not enough data to register account',
+            success: false,
+            msg: 'Error: Not enough data to register account',
         });
     }
 
@@ -49,8 +49,8 @@ router.route('/').post( async (req, res) => {
         if (existingUser.length !== 0) {
             res.status = 409;
             return res.json({
-                'success': false,
-                'msg': 'Error: username unavailable',
+                success: false,
+                msg: 'Error: username unavailable',
             });
         }
 
@@ -59,8 +59,8 @@ router.route('/').post( async (req, res) => {
         if (existingEmail.length !== 0) {
             res.status = 409;
             return res.json({
-                'success': false,
-                'msg': 'Error: email already in use',
+                success: false,
+                msg: 'Error: email already in use',
             });
         }
 
@@ -72,8 +72,8 @@ router.route('/').post( async (req, res) => {
         if (existingPhone.length !== 0) {
             res.status = 409;
             return res.json({
-                'success': false,
-                'msg': 'Error: phone already in use',
+                success: false,
+                msg: 'Error: phone already in use',
             });
         }
 
@@ -92,11 +92,7 @@ router.route('/').post( async (req, res) => {
         const userDoc = await user.save();
 
         // create JWT
-        const token = jwt.sign(
-            { userID: [userDoc._id, username] },
-            process.env.JWT_TOKEN_SECRET,
-            { expiresIn: process.env.JWT_EXPIRATION },
-        );
+        const token = genAccessToken(userDoc);
 
         // return success
         res.status = 200;
@@ -110,8 +106,8 @@ router.route('/').post( async (req, res) => {
     } catch(err) {
         res.status = 500;
         return res.json({
-            'success': false,
-            'msg': `Error:  ${err}`,
+            success: false,
+            msg: `Error:  ${err}`,
         });
     }
 });
