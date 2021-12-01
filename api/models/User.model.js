@@ -17,8 +17,7 @@ const userSchema = new Schema({
     // passwords should be hashed before stored
     password: {
         type: String,
-        required: true,
-    },
+        required: true, },
 
     // display name
     name: {
@@ -38,6 +37,7 @@ const userSchema = new Schema({
         required: true,
         match: [/^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/, "Please use a valid email."],
     },
+    confirmedEmail: {type: Boolean, default: false},
 
     // user's phone
     countryCode: {
@@ -52,6 +52,7 @@ const userSchema = new Schema({
             required: [true, "Phone Number is a required field."],
             match: [/^[0-9-(),]{6,14}$/, "Please use a valid phone number."],
     },
+    confirmedPhone: {type: Boolean, default: false},
 
 
     // instagram handle
