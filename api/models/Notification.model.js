@@ -30,6 +30,9 @@ const notificationSchema = new Schema ({
     // outing which notification applies to (if applicable)
     outing: {type: mongoose.Schema.Types.ObjectId, ref: 'Outing'},
 
+    // notification timestamp
+    timestamp: {type: Date, default: Date.now(), index: true},
+
 });
 
 const Notification = mongoose.model('Notification', notificationSchema);

@@ -54,20 +54,8 @@ const userSchema = new Schema({
     },
     confirmedPhone: {type: Boolean, default: false},
 
-
-    // instagram handle
-    instagram: {
-        type: String,
-        trim: true,
-        minLength: 1,
-        maxLength: 30,
-    },
-
-    // profile picture save location
-    profilePicLocation: {
-        type: String,
-        default: "",
-    },
+    // profile picture
+    profilePicture: {type: mongoose.Schema.Types.ObjectId, ref: 'Image'},
 
     // array of Users which are friends
     friends: [ this ],  // friends is a list of users aka 'this' model

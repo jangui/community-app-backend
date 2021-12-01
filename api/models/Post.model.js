@@ -18,10 +18,13 @@ const postSchema = new Schema({
     text: {type: String, trim: true, minLength: 1, maxLength: 2000},
 
     // location of post
-    postLocation: {type: String, trim: true, default: ""},
+    postLocation: {type: String, trim: true},
 
-    // picture save loc (if applicable: photo posts only)
-    pictureLocation: {type: String, trim: true, default: ""},
+    // the post's picture (if applicable)
+    image: {type: mongoose.Schema.Types.ObjectId, ref: 'Image'},
+
+    // post timestamp
+    timestape: {type: Date, default: Date.now(), index=true },
 
 });
 

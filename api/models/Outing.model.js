@@ -34,6 +34,9 @@ const outingSchema = new Schema({
 
     // outing poll that user can vote on
     poll: {type: mongoose.Schema.Types.ObjectId, ref: 'OutingPoll'},
+
+    // outing timestamp
+    timestamp: {type: Date, default: Date.now(), index=true},
 });
 
 const Outing = mongoose.model('Outing', outingSchema);

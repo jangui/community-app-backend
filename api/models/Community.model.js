@@ -20,10 +20,7 @@ const communitySchema = new Schema({
     },
 
     // community picture
-    picLocation: {
-        type: String,
-        default: "",
-    },
+    picture: {type: mongoose.Schema.Types.ObjectId, ref: 'Image'},
 
     // community privacy
     // open == true (public); open == false (private)
