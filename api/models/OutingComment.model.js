@@ -13,7 +13,7 @@ const outingCommentSchema = new Schema({
     comment: {type: String, trim: true, minLength: 1, maxLength: 2000},
 
     // comment timestamp
-    timestamp: {type: Date, default: Date.now(), index=true},
+    timestamp: {type: Date, default: Date.now(), index: true},
 });
 
 const OutingComment = mongoose.model('OutingComment', outingCommentSchema);

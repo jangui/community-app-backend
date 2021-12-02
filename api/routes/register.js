@@ -100,7 +100,7 @@ router.route('/').post( async (req, res) => {
             success: true,
             msg: `${username} successfully registered`,
             token: token,
-            user: user,
+            user: { _id: user._id, username: user.username },
         });
 
     } catch(err) {

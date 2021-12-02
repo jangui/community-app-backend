@@ -20,12 +20,18 @@ const database = process.env.DATABASE
 const options = "retryWrites=true&authSource=admin"
 const uri = `mongodb://${user}:${pass}@${hostname}:${mongodbPort}/${database}?${options}`
 
+// get rid of depreciation warnings for mongoose v5.4.x
+mongoose.set('useNewUrlParser', true);
+mongoose.set('useFindAndModify', false);
+mongoose.set('useCreateIndex', true);
+
 // connect to database
-mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true } );
+mongoose.connect(uri, { useUnifiedTopology: true } );
 const connection = mongoose.connection;
 connection.once('open', () => {
   console.log("Connected to database");
 });
+
 
 // set up routes
 const registerRouter = require('./routes/register');

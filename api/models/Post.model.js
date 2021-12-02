@@ -24,7 +24,7 @@ const postSchema = new Schema({
     image: {type: mongoose.Schema.Types.ObjectId, ref: 'Image'},
 
     // post timestamp
-    timestape: {type: Date, default: Date.now(), index=true },
+    timestamp: {type: Date, default: Date.now(), index: true },
 
 });
 

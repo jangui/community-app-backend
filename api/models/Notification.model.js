@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 
 const notificationSchema = new Schema ({
     // user whom is being notified
-    notifee: {type: mongoose.Schema.Types.ObjectId, ref: 'User', index=true},
+    notifee: {type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true},
 
     // user whom caused notification
     notifier: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
@@ -22,7 +22,7 @@ const notificationSchema = new Schema ({
     notificationType: {type: Number, min: 0, max: 9},
 
     // picture preview for notification (if applicable)
-    pictureSaveLoc: {type: String, trim: true, default: ""},
+    image: {type: mongoose.Schema.Types.ObjectId, ref: 'Image'},
 
     // community which notification applies to (if applicable)
     community: {type: mongoose.Schema.Types.ObjectId, ref: 'Community'},

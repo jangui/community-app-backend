@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 
 const outingPollSchema = new Schema({
     // outing which poll refers to
-    outing: {type: mongoose.Schema.Types.ObjectId, ref: 'Outing', index=true},
+    outing: {type: mongoose.Schema.Types.ObjectId, ref: 'Outing', index: true},
 
     // poll type
     pollType: {type: String, trim: true, minLength: 1, maxLength: 20},

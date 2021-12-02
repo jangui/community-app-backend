@@ -15,12 +15,11 @@ const successfulLogin = (user, res) => {
     const token = genAccessToken(user);
 
     // return success
-    res.status = 200;
-    return res.json({
+    return res.status(200).json({
         success: true,
         msg: `${user.username} successfully logged in`,
         token: token,
-        user: user,
+        user: { _id: user._id, username: user.username},
     });
 }
 
@@ -59,8 +58,7 @@ router.route('/').post( async (req, res) => {
     else if (countryCode && phoneNumber) {
             userIdentifier = `${countryCode} ${phoneNumber}`;
     } else {
-        res.status = 409;
-        return res.json({
+        return res.status(409).json({
             success: false,
             msg: 'Error: no user identifier',
         });
@@ -68,13 +66,17 @@ router.route('/').post( async (req, res) => {
     }
 
     try {
-        const user = await existingUser(userIdentifier);
+        // check user exists
+        userDoc = await existingUser(userIdentifier);
+
+        // get password
+        const user = await User.findOne({_id: userDoc._id}, 'username password').lean();
+        const hashedPassword = user.password;
 
         // check password
-        const match = await bcrypt.compare(password, user.password);
+        const match = await bcrypt.compare(password, hashedPassword);
         if(!(match)) {
-            res.status = 401;
-            return res.json({
+            return res.status(401).json({
                 success: false,
                 msg: 'Error: invalid login', // purposely ambigious
             });
@@ -83,8 +85,7 @@ router.route('/').post( async (req, res) => {
         return successfulLogin(user, res);
 
     } catch(err) {
-        res.status = 500;
-        return res.json({
+        return res.status(500).json({
             success: false,
             msg: `Error:  ${err}`,
         });
