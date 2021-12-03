@@ -17,11 +17,11 @@ const existingUser = (userIdentifier) => {
         try {
             let user;
             // check if identifier is a valid username
-            user = await User.findOne({username: userIdentifier}).select('username').lean();
+            user = await User.findOne({username: userIdentifier}, 'username').lean();
             if (user) { res(user); return; }
 
             // check if identifier is a valid email
-            user = await User.findOne({email: userIdentifier}).select('username').lean();
+            user = await User.findOne({email: userIdentifier}, 'username').lean();
             if (user) { res(user); return; }
 
             // check if identifier is a valid phone
@@ -32,7 +32,7 @@ const existingUser = (userIdentifier) => {
             user = await User.findOne({
                 countryCode: countryCode,
                 phoneNumber: phoneNumber
-            }).select('username').lean();
+            }, 'username').lean();
             if (user) { res(user); return; }
 
 
@@ -55,7 +55,7 @@ const areFriends = (userID1, userID2) => {
     return new Promise( async (res, rej) => {
         try {
             // check users are friends
-            const user = await User.findById(userID1).select('friends').lean();
+            const user = await User.findById(userID1, 'friends').lean();
 
             if (user.friends.includes(userID2)) {
                 res(true);

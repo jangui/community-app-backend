@@ -145,7 +145,7 @@ router.route('/:userID/posts/').post( async (req, res) => {
     const desiredUser = req.params.userID;
 
     try {
-        // only get posts for current users or friends
+        // only get posts for current user or friends of the current user
         if (currentUser !== desiredUser && !(await areFriends(currentUser, desiredUser))) {
             return res.status(401).json({
                 success: false,
@@ -188,7 +188,7 @@ router.route('/:userID/posts/').post( async (req, res) => {
 
 router.route('/addFriend/').post( async (req, res) => {
     const currentUser = res.locals.userID;
-    const newFriend = req.body.otherUserID;
+    const newFriend = req.body.userID;
 
     // check if we're adding ourselves
     if (currentUser === newFriend) {
@@ -208,6 +208,21 @@ router.route('/addFriend/').post( async (req, res) => {
                 msg: `Error: ${currentUser} and ${newFriend} are already friends`,
             });
         }
+
+        // check if we have a friend request from the user
+        const user = await User.findById(currentUser, 'friendRequests').lean();
+        if (!(user.friendRequests.includes(newFriend))) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: no friend request from ${newFriend}. Cannot add friend`,
+            });
+
+        }
+
+        // remove friendRequest
+        await User.findByIdAndUpdate(currentUser,
+            { $pull: { friendRequests: newFriend }}
+        );
 
         // add new friend to current user's friends
         await User.findByIdAndUpdate(currentUser,
@@ -235,7 +250,7 @@ router.route('/addFriend/').post( async (req, res) => {
 
 router.route('/removeFriend/').post( async (req, res) => {
     const currentUser = res.locals.userID;
-    const oldFriend = req.body.otherUserID;
+    const oldFriend = req.body.userID;
 
     // check if we're removing ourselves
     if (currentUser === oldFriend) {
@@ -267,6 +282,114 @@ router.route('/removeFriend/').post( async (req, res) => {
         return res.status(200).json({
             success: true,
             msg: `${currentUser} and ${oldFriend} are no longer friends`,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error:  ${err}`,
+        });
+    }
+
+});
+
+// get a users friends
+router.route('/:userID/friends').get( async (req, res) => {
+    const currentUser = res.locals.userID;
+    const desiredUser = req.params.userID;
+
+    try {
+        // only get friends for current user or friends of current user
+        if (currentUser !== desiredUser && !(await areFriends(currentUser, desiredUser))) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: User ${currentUser} cannot get ${desiredUser}'s friends`,
+            });
+        }
+
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        // get friends
+        const user = await User.findById(desiredUser, 'friends').lean()
+        friends = user.friends.slice(skip, skip+limit+1);
+
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got friends ${skip}-${limit+skip} for ${desiredUser}`,
+            friends: friends,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error:  ${err}`,
+        });
+    }
+});
+
+// send a friend request
+router.route('/friendRequest').post( async (req, res) => {
+    const currentUser = res.locals.userID;
+    const desiredUser = req.body.userID;
+
+    try {
+        // check if we're sending ourselves a friend req
+        if (currentUser === desiredUser) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: cannot send yourself a friend request`,
+            });
+        }
+
+        // check if we're sending a friend a friend req
+        if (await areFriends(currentUser, desiredUser)) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: User ${currentUser} and ${desiredUser} are already friends`,
+            });
+        }
+
+        // check if we already sent a friend req
+        const user = await User.findById(desiredUser, 'friendRequests').lean();
+        if (user.friendRequests.includes(currentUser)) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: User ${currentUser} already send ${desiredUser} a friend request`,
+            });
+        }
+
+        // send friend request
+        await User.findByIdAndUpdate(desiredUser,
+            { $push: { friendRequests: currentUser }}
+        );
+        return res.status(200).json({
+            success: true,
+            msg: `Successfully sent ${desiredUser} a friend request`,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error:  ${err}`,
+        });
+    }
+
+});
+
+// cancel a friend request
+router.route('/cancelFriendRequest').post( async (req, res) => {
+    const currentUser = res.locals.userID;
+    const desiredUser = req.params.userID;
+
+    try {
+        // cancel friend request
+        await User.findByIdAndUpdate(desiredUser,
+            { $pull: { friendRequests: currentUser }}
+        );
+        return res.status(200).json({
+            success: false,
+            msg: `Successfully cancelled friend request to ${desiredUser}`,
         });
 
     } catch(err) {
