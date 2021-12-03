@@ -19,7 +19,7 @@ const successfulLogin = (user, res) => {
         success: true,
         msg: `${user.username} successfully logged in`,
         token: token,
-        user: { _id: user._id, username: user.username},
+        user: user,
     });
 }
 
@@ -70,7 +70,10 @@ router.route('/').post( async (req, res) => {
         userDoc = await existingUser(userIdentifier);
 
         // get password
-        const user = await User.findOne({_id: userDoc._id}, 'username password').lean();
+        const user = await User.findOne(
+            {_id: userDoc._id},
+            'username password email countryCode phoneNumber confirmedPhone confirmedEmail'
+        ).lean();
         const hashedPassword = user.password;
 
         // check password
@@ -81,6 +84,10 @@ router.route('/').post( async (req, res) => {
                 msg: 'Error: invalid login', // purposely ambigious
             });
         }
+
+        // remove password from user object
+        // we don't want to send back the hashed password
+        delete user.password;
 
         return successfulLogin(user, res);
 
