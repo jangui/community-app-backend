@@ -22,7 +22,7 @@ const notificationSchema = new Schema ({
     notificationType: {type: Number, min: 0, max: 9},
 
     // picture preview for notification (if applicable)
-    image: {type: mongoose.Schema.Types.ObjectId, ref: 'Image'},
+    image: {type: mongoose.Schema.Types.ObjectId, ref: 'ImageModel'},
 
     // community which notification applies to (if applicable)
     community: {type: mongoose.Schema.Types.ObjectId, ref: 'Community'},

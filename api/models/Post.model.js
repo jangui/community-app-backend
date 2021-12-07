@@ -21,7 +21,7 @@ const postSchema = new Schema({
     postLocation: {type: String, trim: true},
 
     // the post's picture (if applicable)
-    image: {type: mongoose.Schema.Types.ObjectId, ref: 'Image'},
+    image: {type: mongoose.Schema.Types.ObjectId, ref: 'ImageModel'},
 
     // post timestamp
     timestamp: {type: Date, default: Date.now(), index: true },

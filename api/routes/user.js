@@ -160,7 +160,7 @@ router.route('/').delete( async (req, res) => {
  *       success: false
  *       msg: appropriate error msg
  */
-router.route('/:username/posts/').get( async (req, res) => {
+router.route('/:username/posts/').post( async (req, res) => {
     const currentUser = res.locals.username;
     const currentUserID = res.locals.userID;
     const desiredUser = req.params.username;
@@ -182,9 +182,9 @@ router.route('/:username/posts/').get( async (req, res) => {
         const limit = parseInt(req.body.limit);
 
         // get posts
-        const posts = (await Post.aggregate([
+        const posts = await Post.aggregate([
             { $match: {
-                owner: desiredUserID,
+                owner: mongoose.Types.ObjectId(desiredUserID),
             }},
             { $skip: skip},
             { $limit: limit},
@@ -192,10 +192,11 @@ router.route('/:username/posts/').get( async (req, res) => {
             { $project: {
                 "_id": "$_id",
                 "postType": "$postType",
+                "postLocation": "$postLocation",
                 "text": "$text",
                 "image": "$image",
             }},
-        ]))[0];
+        ]);
 
         return res.status(200).json({
             success: true,

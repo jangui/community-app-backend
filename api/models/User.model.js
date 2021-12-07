@@ -55,7 +55,7 @@ const userSchema = new Schema({
     confirmedPhone: {type: Boolean, default: false},
 
     // profile picture
-    profilePicture: {type: mongoose.Schema.Types.ObjectId, ref: 'Image'},
+    profilePicture: {type: mongoose.Schema.Types.ObjectId, ref: 'ImageModel'},
 
     // array of Users which are friends
     friends: [ this ],  // friends is a list of users aka 'this' model
