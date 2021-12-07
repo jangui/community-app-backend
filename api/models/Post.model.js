@@ -15,7 +15,7 @@ const postSchema = new Schema({
     postType: {type: Number, min: 0, max: 1},
 
     // text for text post OR caption for picture post
-    text: {type: String, trim: true, minLength: 1, maxLength: 2000},
+    postText: {type: String, trim: true, minLength: 1, maxLength: 2000},
 
     // location of post
     postLocation: {type: String, trim: true},

@@ -124,6 +124,7 @@ router.route('/').delete( async (req, res) => {
         // delete us as member from all out communities
         // delete all our friend requests
         // delete us as friend from all our friends
+        // delete all our comments & likes
 
         return res.status(200).json({
             success: true,
@@ -193,7 +194,7 @@ router.route('/:username/posts/').post( async (req, res) => {
                 "_id": "$_id",
                 "postType": "$postType",
                 "postLocation": "$postLocation",
-                "text": "$text",
+                "postText": "$postText",
                 "image": "$image",
             }},
         ]);

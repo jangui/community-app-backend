@@ -9,4 +9,5 @@ export API_PORT=""
 export SALT_ROUNDS=""
 export JWT_TOKEN_SECRET=""
 export JWT_EXPIRATION="2h"
+export IMAGE_DIR=""
 
