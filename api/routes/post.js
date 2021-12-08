@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Post = require('../models/Post.model');
 const User = require('../models/User.model');
 const PostComment = require('../models/PostComment.model');
+const PostLike = require('../models/PostLike.model');
 
 const { uploadImage, areFriends } = require('../utils');
 
@@ -129,7 +130,7 @@ router.route('/comment/:postID').post( async (req, res) => {
     const username = res.locals.username;
     const userID = res.locals.userID;
     const postID = req.params.postID;
-    const comment = req.params.comment;
+    const comment = req.body.comment;
 
     try {
         // check users are friends
@@ -144,6 +145,7 @@ router.route('/comment/:postID').post( async (req, res) => {
         // make comment
         const postComment = new PostComment({
             owner: userID,
+            username: username,
             post: postID,
             comment: comment
         });
@@ -168,6 +170,47 @@ router.route('/comment/:postID').post( async (req, res) => {
         });
     }
 });
+router.route('/updateComment/:commentID').post( async (req, res) => {
+    const username = res.locals.username;
+    const userID = res.locals.userID;
+    const commentID = req.params.commentID;
+    const updatedComment = req.body.updatedComment;
+
+    try {
+        // check theres an updated comment
+        if (!updatedComment) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: please provided updated comment`,
+            });
+        }
+
+        // make sure we're updating a comment we own
+        let comment = await PostComment.findById(commentID);
+        if (comment.owner !== userID) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: ${username} cannot edit ${comment.username}'s comment`,
+            });
+        }
+
+        // update comment
+        comment.comment = updatedComment;
+        await comment.save();
+
+        return res.status(200).json({
+            success: true,
+            msg: `Comment succesfully updated!`,
+            comment: comment,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+})
 
 router.route('/deleteComment/:commentID').post( async (req, res) => {
     const username = res.locals.username;
@@ -207,7 +250,7 @@ router.route('/like/:postID').post( async (req, res) => {
 
     try {
         // check users are friends
-        const post = await Post.findById(postID, 'owner likes').lean();
+        const post = await Post.findById(postID, 'owner').lean();
         if (!areFriends(userID, post.owner)) {
             return res.status(409).json({
                 success: false,
@@ -216,24 +259,25 @@ router.route('/like/:postID').post( async (req, res) => {
         }
 
         // check if post already liked
-        const likes = post.likes;
-        let hasLiked = false;
-        likes.map((like) => {
-            if (like.toString() === userID) {
-               hasLiked = true;
-               return;
-            }
-        });
-        if (hasLiked) {
+        var like = await PostLike.findOne({post: postID, owner: userID}, '_id').lean();
+        if (like) {
             return res.status(400).json({
                 success: false,
                 msg: `Error! ${username} already likes post ${postID}`,
             });
         }
 
+        // create like
+        like = new PostLike({
+            owner: userID,
+            username: username,
+            post: postID,
+        });
+        const likeDoc = await like.save();
+
         // add like to post
         await Post.findByIdAndUpdate(postID,
-            { $push: { likes: userID }}
+            { $push: { likes: likeDoc._id }}
         );
 
         return res.status(200).json({
@@ -265,21 +309,17 @@ router.route('/unlike/:postID').post( async (req, res) => {
             });
         }
 
-        // check if not liked
-        const likes = post.likes;
-        let hasLiked = false;
-        likes.map((like) => {
-            if (like.toString() === userID) {
-               hasLiked = true;
-               return;
-            }
-        });
-        if (!hasLiked) {
+        // check if post not liked
+        var like = await PostLike.findOne({post: postID, owner: userID}, '_id').lean();
+        if (!like) {
             return res.status(400).json({
                 success: false,
                 msg: `Error! ${username} does not like post ${postID}`,
             });
         }
+
+        // delete like
+        await PostLike.findOneAndDelete({owner: userID, post: postID});
 
         // remove like to post
         await Post.findByIdAndUpdate(postID,
@@ -299,10 +339,104 @@ router.route('/unlike/:postID').post( async (req, res) => {
     }
 });
 
-// get likes
-router.route('/likes/:postID').post( async (req, res) => {});
-
 // get comments
-router.route('/comments/:postID').post( async (req, res) => {});
+router.route('/comments/:postID').post( async (req, res) => {
+    const username = res.locals.username;
+    const userID = res.locals.userID;
+    const postID = req.params.postID;
+
+    try {
+        // make sure you can see post
+        const post = await Post.findById(postID, 'owner').lean();
+        if (!(areFriends(userID, post.owner))) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error ${username} cannot get post ${postID}'s comments`
+            });
+        }
+
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        // get comments
+        const comments = await PostComment.aggregate([
+            { $match: {
+                post: mongoose.Types.ObjectId(postID),
+            }},
+            { $skip: skip},
+            { $limit: limit},
+            { $sort: { timestamp: 1 }},
+            { $project: {
+                "_id": "$_id",
+                "username": "$username",
+                "userID": "$owner",
+                "comment": "$comment",
+                "timestamp": "$timestamp",
+            }},
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got post comments ${skip}-${limit+skip} for post ${postID}`,
+            comments: comments,
+        });
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+
+});
+
+// get likes
+router.route('/likes/:postID').post( async (req, res) => {
+    const username = res.locals.username;
+    const userID = res.locals.userID;
+    const postID = req.params.postID;
+
+    try {
+        // make sure you can see post
+        const post = await Post.findById(postID, 'owner').lean();
+        if (!(areFriends(userID, post.owner))) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error ${username} cannot get post ${postID}'s likes`
+            });
+        }
+
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        // get likes
+        const likes = await PostLike.aggregate([
+            { $match: {
+                post: mongoose.Types.ObjectId(postID),
+            }},
+            { $skip: skip},
+            { $limit: limit},
+            { $sort: { timestamp: 1 }},
+            { $project: {
+                "_id": "$_id",
+                "username": "$username",
+                "userID": "$owner",
+            }},
+        ]);
+
+        // TODO user also needs to know if they are friends with each person
+        // who liked the post
+
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got post likes ${skip}-${limit+skip} for post ${postID}`,
+            likes: likes,
+        });
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+});
 
 module.exports = router;
