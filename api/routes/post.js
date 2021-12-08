@@ -1,9 +1,11 @@
 const router = require('express').Router();
 const mongoose = require('mongoose');
 
-const Post = require('../models/Post.model.js');
-const User = require('../models/User.model.js');
-const { uploadImage } = require('../utils');
+const Post = require('../models/Post.model');
+const User = require('../models/User.model');
+const PostComment = require('../models/PostComment.model');
+
+const { uploadImage, areFriends } = require('../utils');
 
 router.route('/new').post( async (req, res) => {
     const username = res.locals.username;
@@ -122,5 +124,185 @@ router.route('/:postID').delete( async (req, res) => {
         });
     }
 });
+
+router.route('/comment/:postID').post( async (req, res) => {
+    const username = res.locals.username;
+    const userID = res.locals.userID;
+    const postID = req.params.postID;
+    const comment = req.params.comment;
+
+    try {
+        // check users are friends
+        const post = await Post.findById(postID, 'owner').lean();
+        if (!areFriends(userID, post.owner)) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: Unauthorized. ${username} cannot comment on ${postID}`,
+            });
+        }
+
+        // make comment
+        const postComment = new PostComment({
+            owner: userID,
+            post: postID,
+            comment: comment
+        });
+        const postCommentDoc = await postComment.save();
+        const postCommentID = postCommentDoc._id;
+
+
+        // add comment to post
+        await Post.findByIdAndUpdate(postID,
+            { $push: { comments: postCommentID }}
+        );
+
+        return res.status(200).json({
+            success: true,
+            msg: `Success! ${username} commented on post ${postID}`,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+});
+
+router.route('/deleteComment/:commentID').post( async (req, res) => {
+    const username = res.locals.username;
+    const userID = res.locals.userID;
+    const commentID = req.params.commentID;
+
+    try {
+        // make sure we are deleting our own comment
+        const comment = await PostComment.findById(commentID, 'owner').lean();
+        if (comment.owner.toString() !== userID) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: Unauthorized. ${username} does not own comment ${commentID}`,
+            });
+        }
+
+        // delete comment
+        await PostComment.findByIdAndDelete(commentID);
+
+        return res.status(200).json({
+            success: true,
+            msg: `Success! Comment ${commentID} deleted.`,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+});
+
+router.route('/like/:postID').post( async (req, res) => {
+    const username = res.locals.username;
+    const userID = res.locals.userID;
+    const postID = req.params.postID;
+
+    try {
+        // check users are friends
+        const post = await Post.findById(postID, 'owner likes').lean();
+        if (!areFriends(userID, post.owner)) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: Unauthorized. ${username} cannot like post ${postID}`,
+            });
+        }
+
+        // check if post already liked
+        const likes = post.likes;
+        let hasLiked = false;
+        likes.map((like) => {
+            if (like.toString() === userID) {
+               hasLiked = true;
+               return;
+            }
+        });
+        if (hasLiked) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error! ${username} already likes post ${postID}`,
+            });
+        }
+
+        // add like to post
+        await Post.findByIdAndUpdate(postID,
+            { $push: { likes: userID }}
+        );
+
+        return res.status(200).json({
+            success: true,
+            msg: `Success! ${username} liked post ${postID}`,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+});
+
+router.route('/unlike/:postID').post( async (req, res) => {
+    const username = res.locals.username;
+    const userID = res.locals.userID;
+    const postID = req.params.postID;
+    const comment = req.params.comment;
+
+    try {
+        // check users are friends
+        const post = await Post.findById(postID, 'owner likes').lean();
+        if (!areFriends(userID, post.owner)) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: Unauthorized. ${username} cannot like post ${postID}`,
+            });
+        }
+
+        // check if not liked
+        const likes = post.likes;
+        let hasLiked = false;
+        likes.map((like) => {
+            if (like.toString() === userID) {
+               hasLiked = true;
+               return;
+            }
+        });
+        if (!hasLiked) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error! ${username} does not like post ${postID}`,
+            });
+        }
+
+        // remove like to post
+        await Post.findByIdAndUpdate(postID,
+            { $pull: { likes: userID }}
+        );
+
+        return res.status(200).json({
+            success: true,
+            msg: `Success! ${username} unliked post ${postID}`,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+});
+
+// get likes
+router.route('/likes/:postID').post( async (req, res) => {});
+
+// get comments
+router.route('/comments/:postID').post( async (req, res) => {});
 
 module.exports = router;

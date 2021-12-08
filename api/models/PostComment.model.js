@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 const postCommentSchema = new Schema({
     // user that makes the comment
-    user: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+    owner: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
 
     // post comment is made on
     post: {type: mongoose.Schema.Types.ObjectId, ref: 'Post', index: true},

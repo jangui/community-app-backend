@@ -6,7 +6,7 @@ const postSchema = new Schema({
     owner: {type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true},
 
     // array of users that like the post
-    likes: [{type: mongoose.Schema.Types.ObjectId, ref: 'PostLike'}],
+    likes: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
 
     // array of comments on the post
     comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'PostComment'}],
