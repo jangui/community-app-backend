@@ -48,6 +48,9 @@ app.use('/user', authUser, userRouter);
 const postRouter = require('./routes/post');
 app.use('/post', authUser, postRouter);
 
+const communityRouter = require('./routes/community');
+app.use('/community', authUser, communityRouter);
+
 // start app
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);

@@ -8,7 +8,7 @@ const communitySchema = new Schema({
         type: String,
         required: true,
         trim: true,
-        minLength: 1
+        minLength: 1,
         unique: true,
     },
 
@@ -28,9 +28,6 @@ const communitySchema = new Schema({
 
     // community visibility
     visible: {type: Boolean, default: true},
-
-    // member visiblility
-    memberVisibility: {type: Boolean, default: true},
 
     // array of community outings
     outings: [{type: mongoose.Schema.Types.ObjectId, ref: 'Outing'}],

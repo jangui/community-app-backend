@@ -25,7 +25,7 @@ router.route('/new').post( async (req, res) => {
         });
 
         // upload image
-        if (postType === '1') {
+        if (postType === '1' && req.files.image) {
             const imageID = await uploadImage(userID, req, res);
             post.image = imageID;
         }
@@ -112,6 +112,10 @@ router.route('/:postID').delete( async (req, res) => {
 
         // delete post
         await Post.findByIdAndDelete(postID);
+
+        // TODO
+        // delete all likes and comments
+        // remove image
 
         return res.status(200).json({
             success: true,
