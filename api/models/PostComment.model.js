@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const postCommentSchema = new Schema({
-    // user that makes the comment
+    // user's ID that makes the comment
     owner: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
 
     // the user's username

@@ -143,7 +143,7 @@ router.route('/').delete( async (req, res) => {
 });
 
 /*
- * GET /user/{username}/posts endpoint
+ * GET /user/posts/{username} endpoint
  * Responses:
  *   200:
  *     content: application/json
@@ -164,7 +164,7 @@ router.route('/').delete( async (req, res) => {
  *       success: false
  *       msg: appropriate error msg
  */
-router.route('/:username/posts/').post( async (req, res) => {
+router.route('/posts/:username/').post( async (req, res) => {
     const currentUser = res.locals.username;
     const currentUserID = res.locals.userID;
     const desiredUser = req.params.username;
@@ -192,7 +192,7 @@ router.route('/:username/posts/').post( async (req, res) => {
             }},
             { $skip: skip},
             { $limit: limit},
-            { $sort: { timestamp: 1 }},
+            { $sort: { timestamp: -1 }},
             { $project: {
                 "_id": "$_id",
                 "postType": "$postType",
@@ -333,7 +333,7 @@ router.route('/removeFriend/:username').post( async (req, res) => {
 });
 
 // get a users friends
-router.route('/:username/friends').get( async (req, res) => {
+router.route('/friends/:username').get( async (req, res) => {
     const currentUser = res.locals.username;
     const currentUserID = res.locals.userID;
     const desiredUser = req.params.username;
@@ -489,6 +489,48 @@ router.route('/friendRequests').post( async (req, res) => {
             msg: `Error:  ${err}`,
         });
     }
+});
+
+router.route('/feed').post( async (req, res) => {
+    const currentUser = res.locals.username;
+    const currentUserID = res.locals.userID;
+
+    try {
+        /*
+        const user = await User.findById(currentUserID).populate({
+            path: 'friends',
+        });
+        */
+        const user = await User.findById(currentUserID, 'friends');
+        const friends = user.friends;
+
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        // TODO
+        // this is super inneficient
+        let feed = await Post.find({owner: {$in: friends}}).sort('timestamp').skip(skip).limit(limit).lean();
+
+        for (let i = 0; i < feed.length; ++i) {
+            feed[i].commentCount = feed[i].comments.length;
+            feed[i].likesCount = feed[i].likes.length;
+            delete feed[i].comments;
+            delete feed[i].likes;
+        }
+
+        return res.status(200).json({
+            success: true,
+            msg: `Successfully got feed`,
+            feed: feed
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error:  ${err}`,
+        });
+    }
+
 });
 
 module.exports = router;

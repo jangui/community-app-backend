@@ -11,8 +11,8 @@ const outingSchema = new Schema({
 
     // start and end time of outing
     // default is EPOCH as a placeholder for no time set
-    start: {type: Date, default: Date(1970, 0, 1, 0, 0, 0, 0)};
-    end: {type: Date, default: Date(1970, 0, 1, 0, 0, 0, 0)};
+    start: {type: Date, default: Date(1970, 0, 1, 0, 0, 0, 0)},
+    end: {type: Date, default: Date(1970, 0, 1, 0, 0, 0, 0)},
 
     // place of outing
     place: {type: String, trim: true, default: ""},
@@ -20,7 +20,7 @@ const outingSchema = new Schema({
     // can users RSVP
     canRSVP: {type: Boolean, default: false},
 
-    // can users see who has RSVP
+    // can users see attendies / interested
     visibleRSVP: {type: Boolean, default: true},
 
     // array of users that have RSVP'd

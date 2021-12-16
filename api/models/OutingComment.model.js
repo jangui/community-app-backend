@@ -3,8 +3,11 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const outingCommentSchema = new Schema({
-    // user who made comment
-    user: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+    // user's ID that makes the comment
+    owner: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
+
+    // the user's username
+    username: {type: String, trim: true, required: true, minLength: 1, maxLength: 30, required: true },
 
     // the outing the comment was made on
     outing: {type: mongoose.Schema.Types.ObjectId, ref: 'Outing', index: true},

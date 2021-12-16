@@ -13,7 +13,7 @@ router.route('/new').post( async (req, res) => {
     const userID = res.locals.userID;
 
     const postType = req.body.postType;
-    const text = req.body.text;
+    const text = req.body.postText;
     const postLocation = req.body.postLocation;
 
     try {
@@ -21,6 +21,7 @@ router.route('/new').post( async (req, res) => {
         let post = new Post({
             owner: userID,
             postType: postType,
+            postText: postText
 
         });
 

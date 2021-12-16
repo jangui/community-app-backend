@@ -11,13 +11,17 @@ const userSchema = new Schema({
         minLength: 1,
         maxLength: 30,
         unique: true,
+        match: [/^(?=[a-zA-Z0-9._]{8,20}$)(?!.*[_.]{2})[^_.].*[^_.]$/, 'Invalid username']
+
     },
 
     // user's password
     // passwords should be hashed before stored
     password: {
         type: String,
-        required: true, },
+        required: true,
+        match: [],
+    },
 
     // display name
     name: {

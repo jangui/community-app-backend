@@ -51,6 +51,14 @@ app.use('/post', authUser, postRouter);
 const communityRouter = require('./routes/community');
 app.use('/community', authUser, communityRouter);
 
+const imageRouter = require('./routes/image');
+app.use('/image', authUser, imageRouter);
+
+/*
+const outingRouter = require('./routes/outing');
+app.use('./outing', authUser, outingRouter);
+*/
+
 // start app
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
