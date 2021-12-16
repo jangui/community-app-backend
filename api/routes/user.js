@@ -333,7 +333,7 @@ router.route('/removeFriend/:username').post( async (req, res) => {
 });
 
 // get a users friends
-router.route('/friends/:username').get( async (req, res) => {
+router.route('/friends/:username').post( async (req, res) => {
     const currentUser = res.locals.username;
     const currentUserID = res.locals.userID;
     const desiredUser = req.params.username;
@@ -357,6 +357,8 @@ router.route('/friends/:username').get( async (req, res) => {
         // get friends
         const user = await User.findById(desiredUserID, 'friends').lean()
         friends = user.friends.slice(skip, skip+limit+1);
+
+        // TODO show if we are friends with each friends or not
 
         return res.status(200).json({
             success: true,
