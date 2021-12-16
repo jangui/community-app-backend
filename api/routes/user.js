@@ -250,7 +250,6 @@ router.route('/addFriend/:username').post( async (req, res) => {
                 success: false,
                 msg: `Error: no friend request from ${newFriend}. Cannot add friend`,
             });
-
         }
 
         // remove friendRequest
@@ -447,6 +446,15 @@ router.route('/cancelFriendRequest/:username').post( async (req, res) => {
         // get other user's id
         const userDoc = await User.findOne({username: desiredUser}, '_id').lean();
         const desiredUserID = userDoc._id.toString();
+
+        // check if we have a friend request from the user
+        const user = await User.findById(currentUserID, 'friendRequests').lean();
+        if (!(user.friendRequests.includes(desiredUserID))) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: no friend request from ${desiredUser}. Cannot cancel request`,
+            });
+        }
 
         // cancel friend request
         await User.findByIdAndUpdate(desiredUserID,
