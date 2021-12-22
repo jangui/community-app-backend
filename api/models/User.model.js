@@ -8,10 +8,10 @@ const userSchema = new Schema({
         type: String,
         required: true,
         trim: true,
-        minLength: 1,
-        maxLength: 30,
+        minLength: 4,
+        maxLength: 20,
         unique: true,
-        match: [/^(?=[a-zA-Z0-9._]{8,20}$)(?!.*[_.]{2})[^_.].*[^_.]$/, 'Invalid username']
+        match: [/^(?=[a-zA-Z0-9._]{4,20}$)(?!.*[_.]{2})[^_.].*[^_.]$/, 'Invalid username']
 
     },
 
@@ -20,7 +20,6 @@ const userSchema = new Schema({
     password: {
         type: String,
         required: true,
-        match: [],
     },
 
     // display name

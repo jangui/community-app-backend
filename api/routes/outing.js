@@ -42,6 +42,10 @@ router.route('/:outingID').post( async (req, res) => {
             });
         }
 
+        // TODO
+        // get poll options
+        // get vote count for each option
+
         return res.status(200).json({
             sucess: true,
             msg: `Successfully got outing ${outingID}!`,
@@ -286,6 +290,12 @@ router.route('/interest/:outingID').post( async (req, res) => {});
 router.route('/disinterest/:outingID').post( async (req, res) => {});
 router.route('/attend/:outingID').post( async (req, res) => {});
 router.route('/unattend/:outingID').post( async (req, res) => {});
+router.route('/comment/:outingID').post( async (req, res) => {});
+router.route('/editComment/:commentID').post( async (req, res) => {});
+router.route('/deleteComment/:commentID').post( async (req, res) => {});
+router.route('/voteOutingPoll/:outingPollID').post( async (req, res) => {});
+router.route('/removeOutingPollVote/:outingPollID').post( async (req, res) => {});
+router.route('/votes/:outingPollID/').post( async (req, res) => {});
 */
 
 model.exports = router

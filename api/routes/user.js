@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 const User = require('../models/User.model');
 const Post = require('../models/Post.model');
-const { existingUser, areFriends } = require('../utils');
+const { existingUser, areFriends, uploadImage } = require('../utils');
 
 /*
  * All these endpoints are only available if authenticated.
@@ -115,17 +115,17 @@ router.route('/:username').get( async (req, res) => {
  *       msg: appropriate error msg
  */
 router.route('/').delete( async (req, res) => {
-    const loggedInUser = res.locals.username;
+    const currentUserID = res.locals.userID;
 
     try {
         // delete user
-        await User.findOneAndDelete({username: loggedInUser});
+        await User.findByIdAndDelete(currentUserID);
 
         // TODO
         // delete all our posts,
         // delete all our outings
         // delete us as member from all out communities
-        // delete all our friend requests
+        // delete all our sent friend requests
         // delete us as friend from all our friends
         // delete all our comments & likes
 
@@ -140,6 +140,82 @@ router.route('/').delete( async (req, res) => {
             msg: `Error: ${err}`,
         });
     }
+});
+
+router.route('/edit').post( async (req, res) => {
+    const currentUser = res.locals.username;
+    const currentUserID = res.locals.userID;
+
+    try {
+        const user = await User.findByid(currentUserID);
+
+        // update username
+        if (req.body.username) {
+            // check if username valid
+            const existingUser = await User.findOne({username: req.body.username});
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    msg: `Error: username '${req.body.username}' is not available`,
+                })
+            }
+            user.username = req.body.username;
+        }
+
+        // update name
+        if (req.body.name) {
+            user.name = req.body.name;
+        }
+
+        // update password
+        if (req.body.password) {
+            // hash and set new password
+            hashedPassword = await bcrypt.hash(req.body.password, parseInt(process.env.SALT_ROUNDS));
+            user.password = hashedPassword;
+        }
+
+        // update email
+        if (req.body.email) {
+            user.email = req.body.email
+            user.verifiedEmail = false;
+        }
+
+        // update phone
+        if (req.body.countryCode && req.body.phoneNumber) {
+            user.countryCode = req.body.countryCode;
+            user.phoneNumber = req.body.phoneNumber;
+            user.confirmedPhone = false;
+        }
+
+        // update profile image
+        if (req.files.image) {
+            // delete old image if there is one
+            //if (user.profilePicture) {
+                // TODO delete old image
+            //}
+            // upload new image
+            const imageID = await uploadImage(currentUserID, true, false, null, req, res);
+            user.image = imageID;
+        }
+
+        // save
+        const userDoc = await user.save();
+        return res.status(200).json({
+            success: true,
+            msg: `Successfully updated user`,
+            user: {
+                _id: userDoc._id,
+                username: userDoc.username
+            }
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error:  ${err}`,
+        });
+    }
+
 });
 
 /*

@@ -124,4 +124,6 @@ router.route('/:communityID').delete( async (req, res) => {
     }
 });
 
+router.route('/edit/:communityID').post( async (req, res) => {});
+
 module.exports = router;

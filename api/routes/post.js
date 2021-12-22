@@ -190,12 +190,19 @@ router.route('/updateComment/:commentID').post( async (req, res) => {
             });
         }
 
-        // make sure we're updating a comment we own
         let comment = await PostComment.findById(commentID);
+        // check comment exists
+        if (!comment) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: comment ${commentID} does not exists`,
+            });
+        }
+        // make sure we're updating a comment we own
         if (comment.owner !== userID) {
             return res.status(409).json({
                 success: false,
-                msg: `Error: ${username} cannot edit ${comment.username}'s comment`,
+                msg: `Error: ${username} cannot edit ${comment.ownern}'s comment`,
             });
         }
 
