@@ -13,8 +13,7 @@ router.route('/new').post( async (req, res) => {
     const userID = res.locals.userID;
 
     const postType = req.body.postType;
-    const text = req.body.postText;
-    const postLocation = req.body.postLocation;
+    const postText = req.body.postText;
 
     try {
         // create post
@@ -31,7 +30,8 @@ router.route('/new').post( async (req, res) => {
             post.image = imageID;
         }
 
-        if (postLocation) {post.postLocation = postLocation}
+        // add location if provided
+        if (req.body.postLocation) {post.postLocation = req.body.postLocation}
 
         const postDoc = await post.save();
 
