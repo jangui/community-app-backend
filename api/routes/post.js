@@ -166,6 +166,7 @@ router.route('/comment/:postID').post( async (req, res) => {
         return res.status(200).json({
             success: true,
             msg: `Success! ${username} commented on post ${postID}`,
+            comment: {_id: postCommentID},
         });
 
     } catch(err) {
@@ -199,10 +200,10 @@ router.route('/updateComment/:commentID').post( async (req, res) => {
             });
         }
         // make sure we're updating a comment we own
-        if (comment.owner !== userID) {
+        if (comment.owner.toString() !== userID) {
             return res.status(409).json({
                 success: false,
-                msg: `Error: ${username} cannot edit ${comment.ownern}'s comment`,
+                msg: `Error: user ${userID} (${username})  cannot edit ${comment.owner}'s comment`,
             });
         }
 

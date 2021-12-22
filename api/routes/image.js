@@ -6,7 +6,7 @@ const { areFriends } = require('../utils');
 
 router.route('/:imageID').get( async (req, res) => {
     const currentUser = res.locals.username;
-    const currentUSerID = res.locals.userID;
+    const currentUserID = res.locals.userID;
     const imageID = req.params.imageID;
 
     try {
@@ -25,7 +25,7 @@ router.route('/:imageID').get( async (req, res) => {
         if (image.communityImage) {
             // check if user is in image's community
             user = await User.findById(currentUserID, 'communities').lean();
-            if (user.communities.includes(image.community) {
+            if (user.communities.includes(image.community)) {
                 return res.status(200).sendFile(filepath);
             } else {
                 return res.status(409).json({
@@ -36,7 +36,7 @@ router.route('/:imageID').get( async (req, res) => {
         }
 
         // send image if we are friends w/ owner
-        if (areFriends(currentUserID, image.owner) {
+        if (areFriends(currentUserID, image.owner)) {
             return res.status(200).sendFile(filepath);
         }
 

@@ -15,7 +15,7 @@ const uploadImage = (owner, isPublic, communityImage, community, req, res) => {
             const image = new ImageModel({
                 userImage: userImage,
                 isPublic: isPublic,
-                image.owner = mongoose.Types.ObjectId(owner);
+                owner: owner,
             });
 
             // set community if applicable
