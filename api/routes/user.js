@@ -433,7 +433,7 @@ router.route('/friends/:username').post( async (req, res) => {
         const user = await User.findById(desiredUserID, 'friends').lean()
         friends = user.friends.slice(skip, skip+limit+1);
 
-        // TODO show if we are friends with each friends or not
+        // TODO get each friend's username
 
         return res.status(200).json({
             success: true,
@@ -509,11 +509,10 @@ router.route('/friendRequest/:username').post( async (req, res) => {
             msg: `Error:  ${err}`,
         });
     }
-
 });
 
-// cancel a friend request
-router.route('/cancelFriendRequest/:username').post( async (req, res) => {
+// reject a friend request
+router.route('/rejectFriendRequest/:username').post( async (req, res) => {
     const currentUser = res.locals.username;
     const currentUserID = res.locals.userID;
     const desiredUser = req.params.username;
@@ -532,13 +531,13 @@ router.route('/cancelFriendRequest/:username').post( async (req, res) => {
             });
         }
 
-        // cancel friend request
+        // reject friend request
         await User.findByIdAndUpdate(desiredUserID,
             { $pull: { friendRequests: currentUserID }}
         );
         return res.status(200).json({
             success: false,
-            msg: `Successfully cancelled friend request to ${desiredUser}`,
+            msg: `Successfully rejeted friend request from ${desiredUser}`,
         });
 
     } catch(err) {
@@ -562,6 +561,8 @@ router.route('/friendRequests').post( async (req, res) => {
         // get friend requests
         const user = await User.findById(currentUserID, 'friendRequests').lean()
         friendRequests = user.friendRequests.slice(skip, skip+limit+1);
+
+        // TODO get friend reqs usernames
 
         return res.status(200).json({
             success: true,
