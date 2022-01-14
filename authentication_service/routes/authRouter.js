@@ -4,8 +4,8 @@ const { authenticateToken, genAccessToken } = require('../auth');
 
 router.route('/generateToken').post( async (req, res) => {
     try {
-        const username = req.params.username;
-        const userID = req.params.userID;
+        const username = req.body.username;
+        const userID = req.body.userID;
 
         // check username and userID set
         if (!username) {
@@ -39,14 +39,14 @@ router.route('/generateToken').post( async (req, res) => {
     }
 });
 
-router.route('/authenticateToken').get( async (req, res) => {
+router.route('/authenticateToken').post( async (req, res) => {
     try {
         const payload = await authenticateToken(req.headers);
 
         // return success
         return res.status(200).json({
             success: true,
-            msg: `Successfully authenticated token for ${username}`,
+            msg: `Successfully authenticated token for ${payload.username}`,
             username: payload.username,
             userID: payload.userID,
         });
