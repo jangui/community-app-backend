@@ -1,6 +1,8 @@
-const router = require('express').Router();
+import express from 'express';
 
-const { authenticateToken, genAccessToken } = require('../auth');
+import { authenticateToken, genAccessToken } from '../auth.js';
+
+const router = express.Router();
 
 router.route('/generateToken').post( async (req, res) => {
     try {
@@ -59,4 +61,4 @@ router.route('/authenticateToken').post( async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

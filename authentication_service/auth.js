@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
-const authenticateToken = (requestHeaders) => {
+export const authenticateToken = (requestHeaders) => {
     return new Promise( (resolve, reject) => {
         try {
             const authHeader = requestHeaders['authorization'];
@@ -36,7 +36,7 @@ const authenticateToken = (requestHeaders) => {
  *                            When decoded, token has a member named 'payload'
  *                            which contains the userID and username
  */
-const genAccessToken = (userID, username) => {
+export const genAccessToken = (userID, username) => {
     return new Promise( (resolve, reject) => {
         if (!process.env.JWT_TOKEN_SECRET) {
             reject('Error: JWT_TOKEN_SECRET not set');
@@ -60,5 +60,3 @@ const genAccessToken = (userID, username) => {
     });
 }
 
-exports.genAccessToken = genAccessToken;
-exports.authenticateToken = authenticateToken;

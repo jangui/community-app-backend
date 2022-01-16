@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "maxime api",
   "main": "server.js",
+  "type": "module",
   "dependencies": {
     "bcrypt": "^5.0.1",
     "cors": "^2.8.5",
