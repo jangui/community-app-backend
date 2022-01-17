@@ -78,6 +78,26 @@ services:
     labels:
       - "traefik.enable=false"
 
+  static_serving:
+    build:
+      context: static_serving
+      dockerfile: Dockerfile.dev
+    restart: always
+    environment:
+      STATIC_FILE_SERVER_PORT: ${STATIC_FILE_SERVER_PORT}
+      STATIC_FILE_DIR: ${STATIC_FILE_DIR}
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - ${STATIC_FILE_SERVER_PORT}:${STATIC_FILE_SERVER_PORT}
+    networks:
+      - traefik-proxy
+    volumes:
+      - "./static_serving:/app"
+      - "/app/node_modules"
+      - ${STATIC_FILE_DIR}:${STATIC_FILE_DIR}
+    labels:
+      - "traefik.enable=true"
+
   api:
     build: api
     restart: always
