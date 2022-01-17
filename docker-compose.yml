@@ -1,4 +1,4 @@
-version: '3.7' 
+version: '3.8' 
 
 services:
   traefik:
@@ -60,6 +60,23 @@ services:
     labels:
       - "traefik.enable=false"
 
+  auth:
+    build:
+      context: auth
+      dockerfile: Dockerfile.dev
+    restart: always
+    environment:
+      AUTH_SERVER_PORT: ${AUTH_SERVER_PORT}
+      JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      CHOKIDAR_USEPOLLING: "true"
+    networks:
+      - traefik-proxy
+    volumes:
+      - "./auth:/app"
+    labels:
+      - "traefik.enable=false"
+
   api:
     build: api
     restart: always
@@ -71,8 +88,6 @@ services:
       MONGO_DB_HOSTNAME: ${MONGO_DB_HOSTNAME}
       MONGO_DB_PORT: ${MONGO_DB_PORT}
       SALT_ROUNDS: ${SALT_ROUNDS}
-      JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET}
-      JWT_EXPIRATION: ${JWT_EXPIRATION}
     ports:
       - "5000:5000"
     depends_on:
