@@ -1,5 +1,4 @@
 data
 .env
 .idea
-api/node_modules
-static_file_server/node_modules
+*/node_modules
