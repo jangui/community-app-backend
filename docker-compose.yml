@@ -60,46 +60,12 @@ services:
     labels:
       - "traefik.enable=false"
 
-  auth:
-    build:
-      context: auth
-      dockerfile: Dockerfile.dev
-    restart: always
-    environment:
-      AUTH_SERVER_PORT: ${AUTH_SERVER_PORT}
-      JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET}
-      JWT_EXPIRATION: ${JWT_EXPIRATION}
-      CHOKIDAR_USEPOLLING: "true"
-    networks:
-      - traefik-proxy
-    volumes:
-      - "./auth:/app"
-      - "/app/node_modules"
-    labels:
-      - "traefik.enable=false"
-
-  static_serving:
-    build:
-      context: static_serving
-      dockerfile: Dockerfile.dev
-    restart: always
-    environment:
-      STATIC_FILE_SERVER_PORT: ${STATIC_FILE_SERVER_PORT}
-      STATIC_FILE_DIR: ${STATIC_FILE_DIR}
-      CHOKIDAR_USEPOLLING: "true"
-    ports:
-      - ${STATIC_FILE_SERVER_PORT}:${STATIC_FILE_SERVER_PORT}
-    networks:
-      - traefik-proxy
-    volumes:
-      - "./static_serving:/app"
-      - "/app/node_modules"
-      - ${STATIC_FILE_DIR}:${STATIC_FILE_DIR}
-    labels:
-      - "traefik.enable=true"
-
   api:
-    build: api
+    build:
+      context: src
+      args:
+        service: api
+    command: "npm run dev"
     restart: always
     environment:
       MONGO_DB_USER: ${MONGO_DB_USER}
@@ -110,15 +76,18 @@ services:
       MONGO_DB_PORT: ${MONGO_DB_PORT}
       SALT_ROUNDS: ${SALT_ROUNDS}
     ports:
-      - "5000:5000"
+      - "6000:6000"
     depends_on:
         - "db"
     networks:
       - traefik-proxy
     volumes:
-      - "./api:/app"
+      - "./src/api/routes:/app/routes"
+      - "./src/api/controllers:/app/controllers"
+      - "./src/api/server.js:/app/server.js"
       - "/app/node_modules"
-    command: "npm run dev"
+      - "/app/models"
+      - "/app/utils"
     labels:
         # enable traefik auto discovery
       - "traefik.enable=true"
@@ -132,6 +101,31 @@ services:
       - "traefik.http.routers.api.tls.certresolver=leresolver"
         # tell service which port (in container) to route trafic to
       - "traefik.http.services.api.loadbalancer.server.port=${API_PORT}"
+
+  static_serving:
+    build:
+      context: src
+      args:
+        service: static_serving
+    command: "npm run dev"
+    restart: always
+    environment:
+      STATIC_FILE_SERVER_PORT: ${STATIC_FILE_SERVER_PORT}
+      STATIC_FILE_DIR: ${STATIC_FILE_DIR}
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - ${STATIC_FILE_SERVER_PORT}:${STATIC_FILE_SERVER_PORT}
+    networks:
+      - traefik-proxy
+    volumes:
+      - "./src/static_serving/routes:/app/routes"
+      - "./src/static_serving/server.js:/app/server.js"
+      - "/app/node_modules"
+      - "/app/models"
+      - "/app/utils"
+      - ${STATIC_FILE_DIR}:${STATIC_FILE_DIR}
+    labels:
+      - "traefik.enable=true"
 
 networks:
     traefik-proxy:
