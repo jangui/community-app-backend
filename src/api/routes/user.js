@@ -1,9 +1,6 @@
 const express = require('express');
-const router = express.Router();
 
 const {
-    registerUser,
-    login,
     getUser,
     editUser,
     deleteUser,
@@ -16,11 +13,7 @@ const {
     getFeed
 } = require('../controllers/userController');
 
-// register a user
-router.route('/register').post( async (req, res) => registerUser(req, res));
-
-// login
-router.route('/login').post( async (req, res) => login(req, res));
+const router = express.Router();
 
 // get a user's info
 router.route('/:username').get(getUser);

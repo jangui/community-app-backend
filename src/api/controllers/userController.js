@@ -1,12 +1,10 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
 const User = require('../models/User.model.js');
 const Post = require ('../models/Post.model.js');
 
-const { existingUsername,
-    existingEmail,
-    existingPhone,
+const {
+    existingUsername,
     areFriendsID,
     areFriendsUsername,
     hasFriendReqUsername,
@@ -15,140 +13,13 @@ const { existingUsername,
 
 const { genAccessToken } = require('../utils/auth.js');
 
-// register a user
-const registerUser = async (req, res) => {
-    try {
-        console.log(req);
-        const username = req.body.username;
-        const password = req.body.password;
-        const name = req.body.name;
-        const email = req.body.email;
-        const countryCode = req.body.countryCode;
-        const phoneNumber = req.body.phoneNumber;
-
-        // check that request body has all the needed info to register account
-        if (!(username && password && name && email && countryCode && phoneNumber)) {
-            res.status = 400;
-            return res.json({
-                success: false,
-                msg: 'Error: Not enough data to register account',
-            });
-        }
-
-        // check if username taken
-        let existingUser;
-        existingUser = await existingUsername(username, '_id');
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                msg: 'Error: username unavailable',
-            });
-        }
-
-        // check if email taken
-        existingUser = await existingEmail(email, '_id');
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                MEMEMEMEmsg: 'Error: email unavailable', });
-        }
-
-        // check if phone taken
-        existingUser = await existingPhone(`${countryCode} ${phoneNumber}`, '_id');
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                msg: 'Error: phone unavailable',
-            });
-        }
-
-        // hash password
-        hashedPassword = await bcrypt.hash(password, parseInt(process.env.SALT_ROUNDS));
-
-        // save user to database
-        const user = new User({
-            username: username,
-            password: hashedPassword,
-            name: name,
-            email: email,
-            countryCode: countryCode,
-            phoneNumber: phoneNumber
-        });
-        const userDoc = await user.save();
-
-        // create JWT
-        const token = genAccessToken(username, userDoc._id);
-
-        // return success
-        return res.status(200).json({
-            success: true,
-            msg: `${username} successfully registered`,
-            token: token,
-            user: { _id: user._id, username: user.username },
-        });
-
-    } catch(err) {
-        return res.status(500).json({
-            success: false,
-            msg: `Error:  ${err}`,
-        });
-    }
-};
-
-// login
-const login = async (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
-
-    try {
-        // check user exists
-        const user = await User.find({username: username}, 'password');
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                msg: 'Error: invalid login', // purposely ambigious
-            });
-        }
-
-        // get password
-        const hashedPassword = user.password;
-
-        // check password
-        const match = await bcrypt.compare(password, hashedPassword);
-        if(!(match)) {
-            return res.status(401).json({
-                success: false,
-                msg: 'Error: invalid login', // purposely ambigious
-            });
-        }
-
-        // generate access token
-        const token = genAccessToken(user._id, username);
-
-        // return success
-        return res.status(200).json({
-            success: true,
-            msg: `${username} successfully logged in`,
-            token: token,
-            user: {_id: user._id, username: username}
-        });
-
-    } catch(err) {
-        return res.status(500).json({
-            success: false,
-            msg: `Error:  ${err}`,
-        });
-    }
-}
-
-
 // get a user's info
 const getUser = async (req, res) => {
-    const currentUser = res.locals.username;
-    const currentUserID = res.locals.userID;
-    const desiredUsername = req.params.username;
-
     try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const desiredUsername = req.params.username;
+
         // get desired user info
         const desiredUser = (await User.aggregate([
             { $match: {
@@ -283,10 +154,10 @@ const editUser = async (req, res) => {
 
 // delete current user
 const deleteUser = async (req, res) => {
-    const currentUSer = res.locals.username;
-    const currentUserID = res.locals.userID;
-
     try {
+        const currentUSer = res.locals.username;
+        const currentUserID = res.locals.userID;
+
         // delete user
         await User.findByIdAndDelete(currentUserID);
 
@@ -313,11 +184,11 @@ const deleteUser = async (req, res) => {
 
 // get a users friends
 const getFriends = async (req, res) => {
-    const currentUser = res.locals.username;
-    const currentUserID = res.locals.userID;
-    const desiredUsername = req.params.username;
-
     try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const desiredUsername = req.params.username;
+
         // check other user exits
         const desiredUser = await existingUsername(desiredUsername, '_id friends');
 
@@ -419,10 +290,9 @@ const sendFriendRequest = async (req, res) => {
 
 // get current user's friend requests
 const getFriendRequests = async (req, res) => {
-    const currentUser = res.locals.username;
-    const currentUserID = res.locals.userID;
-
     try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
         const skip = parseInt(req.body.skip);
         const limit = parseInt(req.body.limit);
 
@@ -646,7 +516,6 @@ const getFeed = async (req, res) => {
 
 }
 
-exports.registerUser = registerUser;
 exports.getUser = getUser;
 exports.editUser = editUser;
 exports.deleteUser = deleteUser;
