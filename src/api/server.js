@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+
 // app setup
 const app = express();
 const port = 6000; // TODO
@@ -29,9 +30,19 @@ connection.once('open', () => {
   console.log("Connected to database");
 });
 
+
+// middle wares
+const { authUser } = require('./utils/middlewares.js');
+
 // set up routes
+const registerRouter = require('./routes/register.js');
+app.use('/register', registerRouter);
+
+const loginRouter = require('./routes/login.js');
+app.use('/login', loginRouter);
+
 const userRouter = require('./routes/user.js');
-app.use('/user', userRouter);
+app.use('/user', authUser, userRouter);
 
 // start app
 app.listen(port, () => {
