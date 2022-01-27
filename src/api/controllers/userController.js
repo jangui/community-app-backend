@@ -6,8 +6,6 @@ const Post = require ('../models/Post.model.js');
 const {
     existingUsername,
     areFriendsID,
-    areFriendsUsername,
-    hasFriendReqUsername,
     hasFriendReqID
 } = require('../utils/user.js');
 
