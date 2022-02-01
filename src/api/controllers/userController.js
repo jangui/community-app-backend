@@ -9,8 +9,6 @@ const {
     hasFriendReqID
 } = require('../utils/user.js');
 
-const { genAccessToken } = require('../utils/auth.js');
-
 // get a user's info
 const getUser = async (req, res) => {
     try {
