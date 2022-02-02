@@ -1,27 +1,27 @@
 
-const Poll = require('../model/Poll.model.js');
-const PollVote = require('../model/PollVote.model.js');
+const Poll = require('../models/Poll.model.js');
+const PollVote = require('../models/PollVote.model.js');
 
 // create a poll
-const createPoll = async (req, res) = {}
+const createPoll = async (req, res) => {}
 
 // get poll info
-const getPoll = async (req, res) = {}
+const getPoll = async (req, res) => {}
 
 // edit poll
-const editPoll = async (req, res) = {}
+const editPoll = async (req, res) => {}
 
 // delete a poll
-const deletePoll = async (req, res) = {}
+const deletePoll = async (req, res) => {}
 
 // get poll votes
-const getVotes = async (req, res) = {}
+const getVotes = async (req, res) => {}
 
 // vote on poll
-const vote = async (req, res) = {}
+const vote = async (req, res) => {}
 
 // remove poll vote
-const unvote = async (req, res) = {}
+const unvote = async (req, res) => {}
 
 exports.createPoll = createPoll;
 exports.getPoll = getPoll;
