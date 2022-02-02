@@ -57,6 +57,10 @@ const createPost = async (req, res) => {
     }
 }
 
+// get a post's info
+const getPost = async (req, res) => {}
+
+// edit a post
 const editPost = async (req, res) => {
     try {
         const currentUser = res.locals.username;
@@ -98,7 +102,7 @@ const editPost = async (req, res) => {
     }
 }
 
-
+// delete a post
 const deletePost = async (req, res) => {
     try {
         const currentUser = res.locals.username;
@@ -134,11 +138,12 @@ const deletePost = async (req, res) => {
     }
 }
 
+// comment on a post
 const makeComment = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const postID = req.params.postID;
+        const postID = req.body.postID;
         const comment = req.body.comment;
 
         // check post owner and current user are friends
@@ -185,7 +190,7 @@ const getComments = async (req, res) => {
     try {
         const currentUser = res.locals.currentUsername;
         const currentUserID = res.locals.userID;
-        const postID = req.params.postID;
+        const postID = req.body.postID;
 
         // check current user is friends with post owner
         const post = await Post.findById(postID, 'owner').lean();
@@ -235,7 +240,7 @@ const editComment = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const commentID = req.params.commentID;
+        const commentID = req.body.commentID;
         const updatedComment = req.body.updatedComment;
 
         // check theres an updated comment
@@ -280,11 +285,12 @@ const editComment = async (req, res) => {
     }
 }
 
+// delete comment on a post
 const deleteComment = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const commentID = req.params.commentID;
+        const commentID = req.body.commentID;
 
         // make sure we are deleting our own comment
         const comment = await PostComment.findById(commentID, 'owner').lean();
@@ -311,11 +317,12 @@ const deleteComment = async (req, res) => {
     }
 }
 
+// like a post
 const likePost = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const postID = req.params.postID;
+        const postID = req.body.postID;
 
         // check current user is friends w/ post owner
         const post = await Post.findById(postID, 'owner').lean();
@@ -361,12 +368,12 @@ const likePost = async (req, res) => {
     }
 }
 
+// unlike a post
 const unlikePost = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const postID = req.params.postID;
-        const comment = req.params.comment;
+        const postID = req.body.postID;
 
         // check users are friends
         const post = await Post.findById(postID, 'owner likes').lean();
@@ -405,10 +412,10 @@ const unlikePost = async (req, res) => {
             msg: `Error: ${err}`,
         });
     }
-
 }
 
 exports.createPost = createPost;
+exports.getPost = getPost;
 exports.editPost = editPost;
 exports.deletePost = deletePost;
 exports.makeComment = makeComment;

@@ -397,6 +397,10 @@ const leaveCommunity = async (req, res) => {
     }
 }
 
+// TODO
+// get community's outings
+const getOutings = async (req, res) => {}
+
 exports.createCommunity = createCommunity;
 exports.getCommunity = getCommunity;
 exports.editCommunity = editCommunity;
@@ -405,3 +409,4 @@ exports.inviteUser = inviteUser;
 exports.joinCommunity = joinCommunity;
 exports.acceptUser = acceptUser;
 exports.leaveCommunity = leaveCommunity;
+exports.getOutings = getOutings;

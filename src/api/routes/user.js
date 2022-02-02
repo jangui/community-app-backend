@@ -25,22 +25,22 @@ router.route('/edit/').post(editUser);
 router.route('/').delete(deleteUser);
 
 // get a users friends
-router.route('/friends/:username').post(getFriends);
+router.route('/friends/').post(getFriends);
 
 // send a friend request
-router.route('/friendRequest/:username').post(sendFriendRequest);
+router.route('/friendRequest/').post(sendFriendRequest);
 
 // get current user's friend requests
 router.route('/friendRequests').post(getFriendRequests);
 
 // accept friend request
-router.route('/acceptFriendRequest/:username').post(acceptFriendRequest);
+router.route('/accept/friendRequest/').post(acceptFriendRequest);
 
 // reject a friend request
-router.route('/rejectFriendRequest/:username').post(rejectFriendRequest);
+router.route('/reject/friendRequest/').post(rejectFriendRequest);
 
 // remove a friend
-router.route('/removeFriend/:username').post(removeFriend);
+router.route('/remove/friend/').post(removeFriend);
 
 // get current user's feed
 router.route('/feed').post(getFeed);

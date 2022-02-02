@@ -4,6 +4,7 @@ const router = express.Router();
 
 const {
     createPost,
+    getPost,
     editPost,
     deletePost,
     makeComment,
@@ -18,31 +19,31 @@ const {
 router.route('/new').post(createPost);
 
 // TODO
-// view a post
-//router.route('/view').post(viewPost);
+// get a post's info
+//router.route('/:postID').get(getPost);
 
 // edit post
-router.route('/edit/:postID').post(editPost);
+router.route('/edit/').post(editPost);
 
 // delete post
 router.route('/:postID').delete(deletePost);
 
 // comment on post
-router.route('/comment/:postID').post(makeComment);
+router.route('/comment/').post(makeComment);
 
 // get post comments
-router.route('/getComments/:postID').post(getComments);
+router.route('/comments/').post(getComments);
 
 // edit comment
-router.route('/editComment/:commentID').post(editComment);
+router.route('/edit/comment/').post(editComment);
 
 // delete comment
-router.route('/comment/:postID').delete(deleteComment);
+router.route('/delete/comment/').post(deleteComment);
 
 // like post
-router.route('/like/:postID').post(likePost);
+router.route('/like/').post(likePost);
 
 // unlike post
-router.route('/unlike/:postID').post(unlikePost);
+router.route('/unlike/').post(unlikePost);
 
 module.exports = router;

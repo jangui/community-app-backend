@@ -183,7 +183,7 @@ const getFriends = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const desiredUsername = req.params.username;
+        const desiredUsername = req.body.username;
 
         // check other user exits
         const desiredUser = await existingUsername(desiredUsername, '_id friends');
@@ -230,7 +230,7 @@ const sendFriendRequest = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const desiredUsername = req.params.username;
+        const desiredUsername = req.body.username;
 
         // check if we're sending ourselves a friend req
         if (currentUser === desiredUser) {
@@ -322,7 +322,7 @@ const acceptFriendRequest = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const desiredUsername = req.params.username;
+        const desiredUsername = req.body.username;
 
         // check if we're adding ourselves
         if (currentUser === desiredUsername) {
@@ -384,7 +384,7 @@ const rejectFriendRequest = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const desiredUsername = req.params.username;
+        const desiredUsername = req.body.username;
 
         // check other user exists
         const desiredUser = existingUsername(desiredUsername, '_id');
@@ -419,7 +419,7 @@ const removeFriend = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const desiredUsername = req.params.username;
+        const desiredUsername = req.body.username;
 
         // check if we're removing ourselves
         if (currentUser === desiredUsername) {
