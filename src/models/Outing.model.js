@@ -24,16 +24,16 @@ const outingSchema = new Schema({
     visibleRSVP: {type: Boolean, default: true},
 
     // array of users that have RSVP'd
-    attendies: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
+    attendies: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingAttendee'}],
 
     // array of users that are interested
-    interested: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
+    interested: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingInterestee'}],
 
     // array of comments for the outing
     comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingComment'}],
 
-    // outing poll that user can vote on
-    poll: {type: mongoose.Schema.Types.ObjectId, ref: 'OutingPoll'},
+    // outing polls that user can vote on
+    polls: [{type: mongoose.Schema.Types.ObjectId, ref: 'Poll'}],
 
     // outing timestamp
     timestamp: {type: Date, default: Date.now(), index: true},
