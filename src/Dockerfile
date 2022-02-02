@@ -16,5 +16,5 @@ RUN set -xe; \
 
 COPY models ./models/
 COPY utils ./utils/
-COPY "$service/*" ./
+COPY "./$service/." ./
 

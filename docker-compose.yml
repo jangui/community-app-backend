@@ -48,8 +48,6 @@ services:
     restart: always
     networks:
       - traefik-proxy
-    ports:
-      - "27017:27017"
     volumes:
       - "./data/db:/data/db"
 # - "./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro"
@@ -65,7 +63,6 @@ services:
       context: src
       args:
         service: api
-    command: "npm run dev"
     restart: always
     environment:
       MONGO_DB_USER: ${MONGO_DB_USER}
@@ -75,19 +72,12 @@ services:
       MONGO_DB_HOSTNAME: ${MONGO_DB_HOSTNAME}
       MONGO_DB_PORT: ${MONGO_DB_PORT}
       SALT_ROUNDS: ${SALT_ROUNDS}
-    ports:
-      - "6000:6000"
     depends_on:
         - "db"
     networks:
       - traefik-proxy
     volumes:
-      - "./src/api/routes:/app/routes"
-      - "./src/api/controllers:/app/controllers"
-      - "./src/api/server.js:/app/server.js"
       - "/app/node_modules"
-      - "/app/models"
-      - "/app/utils"
     labels:
         # enable traefik auto discovery
       - "traefik.enable=true"
@@ -107,22 +97,16 @@ services:
       context: src
       args:
         service: static_serving
-    command: "npm run dev"
     restart: always
     environment:
       STATIC_FILE_SERVER_PORT: ${STATIC_FILE_SERVER_PORT}
       STATIC_FILE_DIR: ${STATIC_FILE_DIR}
-      CHOKIDAR_USEPOLLING: "true"
     ports:
       - ${STATIC_FILE_SERVER_PORT}:${STATIC_FILE_SERVER_PORT}
     networks:
       - traefik-proxy
     volumes:
-      - "./src/static_serving/routes:/app/routes"
-      - "./src/static_serving/server.js:/app/server.js"
       - "/app/node_modules"
-      - "/app/models"
-      - "/app/utils"
       - ${STATIC_FILE_DIR}:${STATIC_FILE_DIR}
     labels:
       - "traefik.enable=true"
