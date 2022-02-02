@@ -9,13 +9,16 @@ const outingSchema = new Schema({
     // the community the outing is proposed to
     community: {type: mongoose.Schema.Types.ObjectId, ref: 'Community', index: true},
 
+    // outing title
+    title: {type: String, trim: true, minLength: 1, maxLength: 80, required: true},
+
     // start and end time of outing
     // default is EPOCH as a placeholder for no time set
     start: {type: Date, default: Date(1970, 0, 1, 0, 0, 0, 0)},
     end: {type: Date, default: Date(1970, 0, 1, 0, 0, 0, 0)},
 
-    // place of outing
-    place: {type: String, trim: true, default: ""},
+    // location of outing
+    loc: {type: String, trim: true, default: ""},
 
     // can users RSVP
     canRSVP: {type: Boolean, default: false},
@@ -24,7 +27,7 @@ const outingSchema = new Schema({
     visibleRSVP: {type: Boolean, default: true},
 
     // array of users that have RSVP'd
-    attendies: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingAttendee'}],
+    attendees: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingAttendee'}],
 
     // array of users that are interested
     interested: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingInterestee'}],

@@ -9,8 +9,13 @@ const createOuting = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const outingName = req.body.name;
         const communityName = req.body.community;
+        const outingTitle = req.body.title;
+        const startTime = req.body.start;
+        const endTime = req.body.end;
+        const loc = req.body.loc;
+        const canRSVP = req.body.canRSVP;
+        const visibleRSVP = req.body.visibleRSVP;
 
         // get community ID
         const community = await Community.findOne({name: communityName}, '_id').lean();
@@ -21,30 +26,30 @@ const createOuting = async (req, res) => {
         if ((user.communities.includes(communityID))) {
             return res.status(409).json({
                 sucess: false,
-                msg: `Error ${currentUser} does not have access to community ${community}`
+                msg: `Error ${currentUser} does not have access to community ${communityName}`
             });
         }
 
         // create outing
         let outing = new Outing({
-            outingName: req.body.name,
-            community: req.body.communityID,
-            canRSVP: req.body.canRSVP,
+            title: outingTitle,
+            community: communityID,
         });
 
         // add optional parameters
-        if (req.body.place) { outing.place = req.body.place; }
-        if (req.body.visibleRSVP) { outing.visibleRSVP = req.body.visibleRSVP; }
-        if (req.body.start) { outing.start = Date.parse(req.body.start); }
-        if (req.body.end) { outing.end = Date.parse(req.body.end); }
+        if (startTime) { outing.start = Date.parse(startTime); }
+        if (endTime) { outing.end = Date.parse(endTime); }
+        if (loc) { outing.loc = req.body.loc; }
+        if (canRSVP) { outing.canRSVP = canRSVP; }
+        if (visibleRSVP) { outing.visibleRSVP = visibleRSVP; }
 
         // save to database
         const outingDoc = await outing.save();
 
         return res.status(200).json({
             sucess: true,
-            msg: `Successfully created outing ${name}!`,
-            outing: {_id: outingDoc.id, name: outingDoc.name}
+            msg: `Successfully created outing ${outingTitle}!`,
+            outing: {_id: outingDoc.id, title: outingDoc.title},
         });
 
     } catch(err) {
@@ -72,13 +77,15 @@ const getOuting = async (req, res) => {
                 "_id": "$_id",
                 "owner": "$owner",
                 "community": "$community",
+                "title": "$title",
                 "start": "$start",
                 "end": "$end",
-                "RSVP": "$RSVP",
+                "loc": "$loc",
+                "canRSVP": "$canRSVP",
                 "visibleRSVP": "$visibleRSVP",
                 "commentsCount": {$size: "$comments"},
                 "interestedCount": {$size: "$interested"},
-                "attendiesCount": {$size: "$attendies"},
+                "attendeesCount": {$size: "$attendees"},
                 "timestamp": "$timestamp",
             }},
         ]))[0];
@@ -119,7 +126,51 @@ const getOuting = async (req, res) => {
 }
 
 // edit an outing
-const editOuting = async (req, res) => {}
+const editOuting = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const outingTitle = req.body.title;
+        const startTime = req.body.start;
+        const endTime = req.body.end;
+        const loc = req.body.loc;
+
+        // make sure we have permission to edit outing
+        const oldOuting = await Outing.findById(postID, 'owner title community loc start end').lean();
+        if (oldOuting.owner.toString() !== currentUserID) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: Unauthorized. ${currentUser} does not own outing '${oldOuting.title}'`,
+            });
+        }
+
+        // get updates
+        if (!title) { title = oldPost.title }
+        if (!loc) { loc = oldPost.loc }
+        if (!startTime) { startTime = oldPost.postText }
+        if (!endTime) { endTime = oldPost.postText }
+
+        // update posts
+        const updatedOuting = await Outing.findByIdAndUpdate(outingID, {
+            title: title,
+            loc: loc,
+            start: startTime,
+            end: endTime
+        }).select('owner _id title loc start end').lean();
+
+        return res.status(200).json({
+            success: true,
+            msg: `Success! Outing ${outingID} updated.`,
+            post: updatedOuting,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+}
 
 // delete an outing
 const deleteOuting = async (req, res) => {
@@ -168,9 +219,60 @@ const deleteOuting = async (req, res) => {
 }
 
 
-// TODO
 // comment on outing
-const makeOutingComment = async (req, res) => {}
+const makeOutingComment = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const outingID = req.body.outingID;
+        const comment = req.body.comment;
+
+        // check outing exists
+        const outing = Outing.findById(outingID, 'community').lean();
+        if (!outing) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: outing ${outingID} does not exist`
+            });
+        }
+
+        // check current user is part of community outing belongs to
+        const community = outing.community;
+        const user = User.findById(currentUserID, 'communties').lean();
+        if (!user.communities.includes(community)) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${currentUser} does not have access to outing ${outingID}`
+            });
+        }
+
+        // make comment
+        const outingComment = new OutingComment({
+            owner: currentUserID,
+            username: currentUser,
+            outing: outingID,
+            comment: comment
+        });
+        const outingCommentDoc = await postComment.save();
+
+        // add comment to post
+        await Outing.findByIdAndUpdate(outingID,
+            { $push: { comments: outingCommentDoc._id }}
+        );
+
+        return res.status(200).json({
+            success: true,
+            msg: `Success! ${currentUser} commented on outing ${outingID}`,
+            comment: {_id: outingCommentDoc._id},
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+}
 
 // get outing comments
 const getOutingComments = async (req, res) => {
@@ -234,13 +336,87 @@ const getOutingComments = async (req, res) => {
 }
 
 
-// TODO
 // edit outing comment
-const editOutingComment = async (req, res) => {}
+const editOutingComment = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const commentID = req.body.commentID;
+        const updatedComment = req.body.updatedComment;
 
-// TODO
+        // check theres an updated comment
+        if (!updatedComment) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: please provided updated comment`,
+            });
+        }
+
+        // check comment exists
+        let comment = await OutingComment.findById(commentID);
+        if (!comment) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: comment ${commentID} does not exists`,
+            });
+        }
+        // check current user own's comment they want to update
+        if (comment.owner.toString() !== currentUserID) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: user ${currentUser} cannot edit someone else's comment`,
+            });
+        }
+
+        // update comment
+        comment.comment = updatedComment;
+        await comment.save();
+
+        return res.status(200).json({
+            success: true,
+            msg: `Comment succesfully updated!`,
+            comment: comment,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+}
+
 // delete an outing commente
-const deleteOutingComment = async (req, res) => {}
+const deleteOutingComment = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const commentID = req.body.commentID;
+
+        // make sure we are deleting our own comment
+        const comment = await OutingComment.findById(commentID, 'owner').lean();
+        if (comment.owner.toString() !== currentUserID) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: Unauthorized. ${currentUser} does not own comment ${commentID}`,
+            });
+        }
+
+        // delete comment
+        await OutingComment.findByIdAndDelete(commentID);
+
+        return res.status(200).json({
+            success: true,
+            msg: `Success! Comment ${commentID} deleted.`,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+}
 
 // get attendies for outing
 const getAttendees = async (req, res) => {
@@ -298,13 +474,102 @@ const getAttendees = async (req, res) => {
     }
 }
 
-// TODO
 // mark as attending outing
-const attendOuting = async (req, res) => {}
+const attendOuting = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const outingID = req.params.outingID;
 
-// TODO
-// makr as unattending outing
-const unattendOuting = async (req, res) => {}
+        // check outing exists
+        const outing = await Outing.findById(outingID, 'community').lean();
+        if (!outing) {
+            return res.status(400).json({
+                sucess: false,
+                msg: `Error: outing w/ ID: ${outingID} does not exists`
+            });
+        }
+
+        // check if we have access to community outing belongs to
+        const user = await User.findById(currentUserID, 'communities');
+        if (!user.communities.include(outing.community)) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: ${currentUser} does not have access to community ${outing.community}`
+           });
+        }
+
+        // attend outing
+        attendee = new OutingAttendee({
+            attendee: currentUserID,
+            username: currentUser,
+            outing: postID,
+        });
+        const attendeeDoc = await attendee.save();
+
+        // add attendance to outing
+        await Outing.findByIdAndUpdate(outingID,
+            { $push: { attendees: attendeeDoc._id }}
+        );
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+
+}
+
+// mark unattending outing
+const unattendOuting = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const outingID = req.params.outingID;
+
+        // check outing exists
+        const outing = await Outing.findById(outingID, 'community attendees').lean();
+        if (!outing) {
+            return res.status(400).json({
+                sucess: false,
+                msg: `Error: outing w/ ID: ${outingID} does not exists`
+            });
+        }
+
+        // check if we have access to community outing belongs to
+        const user = await User.findById(currentUserID, 'communities');
+        if (!user.communities.include(outing.community)) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: ${currentUser} does not have access to community ${outing.community}`
+           });
+        }
+
+        // check if are attending outing
+        var attendee = await OutingAttendee.findOne({outing: outingID, owner: currentUserID}, '_id').lean();
+        if (!attendee) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error! ${currentUser} is not attending outing ${outingID}`,
+            });
+        }
+
+        // delete attendance
+        await OutingAttendee.findOneAndDelete({owner: currentUserID, outing: outingID});
+
+        // remove attendance from outing
+        await Outing.findByIdAndUpdate(outingID,
+            { $pull: { attendees: attendee._id }}
+        );
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+}
 
 exports.createOuting = createOuting;
 exports.getOuting = getOuting;
