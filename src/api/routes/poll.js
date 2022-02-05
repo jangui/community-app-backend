@@ -12,21 +12,18 @@ const {
 
 const router = express.Router();
 
-// TODO
 // create poll
-//router.route('/create').post(createPoll);
+router.route('/create').post(createPoll);
 
-// TODO
 // get poll info
-//router.route('/:pollID').get(getPoll);
+router.route('/:pollID').get(getPoll);
 
 // TODO
 // edit poll
 //router.route('/edit').post(editPoll);
 
-// TODO
 // delete poll
-//router.route('/:pollID').delete(deletePoll);
+router.route('/:pollID').delete(deletePoll);
 
 // TODO
 // get poll votes
