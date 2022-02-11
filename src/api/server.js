@@ -1,35 +1,37 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const multer = require('multer');
+
+const { conn } = require('./db.js');
+
+// check env vars set
+if (!(
+    process.env.API_DB_USER
+    && process.env.API_DB_PASSWORD
+    && process.env.DATABASE
+    && process.env.API_PORT
+    && process.env.MONGO_DB_HOSTNAME
+    && process.env.MONGO_DB_PORT
+    && process.env.JWT_TOKEN_SECRET
+    && process.env.JWT_EXPIRATION
+    && process.env.BCRYPT_SALT_ROUNDS
+    )) {
+    console.log('Error: missing env vars');
+    process.exit(1);
+}
 
 // app setup
 const app = express();
-const port = 6000; // TODO
-
+const port = process.env.API_PORT;
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// database options
-const user = process.env.MONGO_DB_USER
-const pass = process.env.MONGO_DB_PASSWORD
-const hostname = process.env.MONGO_DB_HOSTNAME
-const mongodbPort = process.env.MONGO_DB_PORT
-const database = process.env.DATABASE
-const options = "retryWrites=true&authSource=admin"
-const uri = `mongodb://${user}:${pass}@${hostname}:${mongodbPort}/${database}?${options}`
-
-// get rid of depreciation warnings for mongoose v5.4.x
-mongoose.set('useNewUrlParser', true);
-mongoose.set('useFindAndModify', false);
-mongoose.set('useCreateIndex', true);
-
-// connect to database
-mongoose.connect(uri, { useUnifiedTopology: true } );
-const connection = mongoose.connection;
-connection.once('open', () => {
+// check db connection
+conn.once('open', () => {
   console.log("Connected to database");
 });
-
 
 // middle wares
 const { authUser } = require('./utils/middlewares.js');
@@ -38,6 +40,7 @@ const { authUser } = require('./utils/middlewares.js');
 const registerRouter = require('./routes/register.js');
 app.use('/register', registerRouter);
 
+/*
 const loginRouter = require('./routes/login.js');
 app.use('/login', loginRouter);
 
@@ -55,6 +58,7 @@ app.use('/outing', authUser, outingRouter);
 
 const pollRouter = require('./routes/poll.js');
 app.use('/poll', authUser, pollRouter);
+*/
 
 // start app
 app.listen(port, () => {

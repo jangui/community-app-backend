@@ -83,7 +83,5 @@ const userSchema = new Schema({
 // this makes is that all user's country code + phone number's aggregate must be unique
 userSchema.index({countryCode: 1, phoneNumber: 1}, { unique: true });
 
-const User = mongoose.model('User', userSchema);
-
-module.exports = User;
+module.exports = userSchema;
 

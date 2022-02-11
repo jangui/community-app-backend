@@ -11,10 +11,10 @@ RUN set -xe; \
     npm install nodemon; \
     mkdir node_modules/.cache && chmod -R 777 node_modules/.cache; \ 
     npm config set cache node_modules/.cache; \
-    mkdir models; \
+    mkdir schemas; \
     mkdir utils; 
 
-COPY models ./models/
+COPY schemas ./schemas/
 COPY utils ./utils/
 COPY "./$service/." ./
 
