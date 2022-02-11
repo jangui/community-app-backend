@@ -8,20 +8,11 @@ services:
   api:
     command: "npm run dev"
     ports:
-      - "6000:6000"
+      - "${API_PORT}:${API_PORT}"
     volumes:
       - "./src/api/routes:/app/routes/"
       - "./src/api/controllers:/app/controllers/"
       - "./src/api/server.js:/app/server.js"
-      - "./src/models:/app/models"
-      - "./src/utils:/app/utils"
-
-  static_serving:
-    ports:
-      - "3000:3000"
-    command: "npm run dev"
-    volumes:
-      - "./src/static_serving/routes:/app/routes"
-      - "./src/static_serving/server.js:/app/server.js"
-      - "./src/models:/app/models"
+      - "./src/api/db.js:/app/db.js"
+      - "./src/schemas:/app/schemas"
       - "./src/utils:/app/utils"

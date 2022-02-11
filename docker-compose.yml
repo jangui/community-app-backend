@@ -4,8 +4,6 @@ services:
   traefik:
     image: traefik:v2.2
     command:
-      # enable web ui
-      - "--api.insecure=true"
       # set provider to docker
       - "--providers.docker=true"
       #only expose containers with 'traefik.enable=true' label
@@ -23,6 +21,9 @@ services:
       - "--certificatesResolvers.leresolver.acme.tlsChallenge=true"
       - "--certificatesResolvers.leresolver.acme.httpChallenge=true"
       - "--certificatesResolvers.leresolver.acme.httpChallenge.entryPoint=web"
+      # enable traefik api and dashboard
+      - "--api=true"
+      - "--api.dashboard=true"
     restart: always
     ports:
       - "80:80"
@@ -35,13 +36,33 @@ services:
       # Lets Encrypt
       - "./data/letsencrypt/acme.json:/letsencrypt/acme.json"
     labels:
-      - "traefik.http.routers.leresolver.tls.certresolver=tls"
       # Redirect all HTTP to HTTPS permanently
       - "traefik.http.routers.http_catchall.entrypoints=web"
       - "traefik.http.routers.http_catchall.rule=HostRegexp(`{any:.+}`)"
       - "traefik.http.routers.http_catchall.middlewares=https_redirect"
       - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
+
+        # auth middleware
+      - "traefik.http.middlewares.auth.basicauth.users=test:$$apr1$$H6uskkkW$$IgXLP6ewTrSuBkTrqE8wj/,test2:$$apr1$$d9hr9HBB$$4HxwgUir3HP4EsggP/QNo0"
+
+      # traefik enable
+      - "traefik.enable=true"
+
+      # enable traefik api
+      - "traefik.http.routers.traefikapi.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefikapi.service=api@internal"
+      - "traefik.http.routers.traefikapi.middlewares=auth"
+      - "traefik.http.routers.traefikapi.tls=true"
+      - "traefik.http.routers.traefikapi.tls.certresolver=leresolver"
+      - "traefik.http.routers.traefikapi.entrypoints=websecure"
+
+      # enable traefik dashboard
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=leresolver"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
 
   db:
     image: mongo
@@ -52,8 +73,8 @@ services:
       - "./data/db:/data/db"
 # - "./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${DB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${DATABASE}
     labels:
       - "traefik.enable=false"
@@ -65,13 +86,15 @@ services:
         service: api
     restart: always
     environment:
-      MONGO_DB_USER: ${MONGO_DB_USER}
-      MONGO_DB_PASSWORD: ${MONGO_DB_PASSWORD}
+      API_DB_USER: ${API_DB_USER}
+      API_DB_PASSWORD: ${API_DB_PASSWORD}
       DATABASE: ${DATABASE}
       API_PORT: ${API_PORT}
       MONGO_DB_HOSTNAME: ${MONGO_DB_HOSTNAME}
       MONGO_DB_PORT: ${MONGO_DB_PORT}
-      SALT_ROUNDS: ${SALT_ROUNDS}
+      JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS}
     depends_on:
         - "db"
     networks:
@@ -91,25 +114,6 @@ services:
       - "traefik.http.routers.api.tls.certresolver=leresolver"
         # tell service which port (in container) to route trafic to
       - "traefik.http.services.api.loadbalancer.server.port=${API_PORT}"
-
-  static_serving:
-    build:
-      context: src
-      args:
-        service: static_serving
-    restart: always
-    environment:
-      STATIC_FILE_SERVER_PORT: ${STATIC_FILE_SERVER_PORT}
-      STATIC_FILE_DIR: ${STATIC_FILE_DIR}
-    ports:
-      - ${STATIC_FILE_SERVER_PORT}:${STATIC_FILE_SERVER_PORT}
-    networks:
-      - traefik-proxy
-    volumes:
-      - "/app/node_modules"
-      - ${STATIC_FILE_DIR}:${STATIC_FILE_DIR}
-    labels:
-      - "traefik.enable=true"
 
 networks:
     traefik-proxy:

@@ -1,23 +1,24 @@
-export ACME_EMAIL=""
-export DOMAIN=""
+# domain
+export DOMAIN=
 
-export MONGO_DB_USER=""
-export MONGO_DB_PASSWORD=""
-export MONGO_DB_HOSTNAME=""
-export MONGO_DB_PORT=""
-export DATABASE=""
+# SSL
+export ACME_EMAIL=
 
-export API_HOSTNAME="api.${DOMAIN}"
-export API_PORT=""
+# database
+export MONGO_DB_HOSTNAME=
+export MONGO_DB_PORT=
+export DATABASE=
+export DB_ROOT_USERNAME=
+export DB_ROOT_PASSWORD=
 
-export AUTH_SERVER_HOSTNAME=""
-export AUTH_SERVER_PORT=""
+# api
+export API_PORT=
+export API_DB_USER=
+export API_DB_PASSWORD=
 
-export STATIC_FILE_SERVER_HOSTNAME=""
-export STATIC_FILE_SERVER_PORT=""
-export STATIC_FILE_DIR=""
+# authentication
+export JWT_TOKEN_SECRET=
+export JWT_EXPIRATION=
 
-export SALT_ROUNDS=""
-export JWT_TOKEN_SECRET=""
-export JWT_EXPIRATION="900"
-
+# password hashing
+export BCRYPT_SALT_ROUNDS=
