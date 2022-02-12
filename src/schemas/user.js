@@ -40,7 +40,9 @@ const userSchema = new Schema({
         required: true,
         match: [/^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/, "Please use a valid email."],
     },
-    confirmedEmail: {type: Boolean, default: false},
+
+    // email verification status
+    verifiedEmail: {type: Boolean, default: false},
 
     // user's phone
     countryCode: {
@@ -55,7 +57,9 @@ const userSchema = new Schema({
             required: [true, "Phone Number is a required field."],
             match: [/^[0-9-(),]{6,14}$/, "Please use a valid phone number."],
     },
-    confirmedPhone: {type: Boolean, default: false},
+
+    // phone verification status
+    verifiedPhone: {type: Boolean, default: false},
 
     // profile picture
     profilePicture: {type: mongoose.Schema.Types.ObjectId, ref: 'ImageModel'},
@@ -74,9 +78,6 @@ const userSchema = new Schema({
 
     // array of user's posts
     posts: [{type: mongoose.Schema.Types.ObjectId, ref: 'Post'}],
-
-    // array of notifications
-    notifications: [{type: mongoose.Schema.Types.ObjectId, ref: 'Notification'}],
 });
 
 // add a compound unique index

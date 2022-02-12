@@ -1,14 +1,12 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 
-const User = require('../models/User.model.js');
-const { existingUsername, existingEmail, existingPhone } = require('../utils/user.js');
-const { genAccessToken } = require('../utils/auth.js');
+const { User }  = require('../db.js');
 
 const router = express.Router();
 
 // register a user
-router.route('/login').post( async (req, res) => {
+router.route('/').post( async (req, res) => {
     try {
         const username = req.body.username;
         const password = req.body.password;
@@ -19,42 +17,39 @@ router.route('/login').post( async (req, res) => {
 
         // check that request body has all the needed info to register account
         if (!(username && password && name && email && countryCode && phoneNumber)) {
-            res.status = 400;
-            return res.json({
+            return res.status(400).json({
                 success: false,
                 msg: 'Error: Not enough data to register account',
             });
         }
 
-        // check if username taken
-        let existingUser;
-        existingUser = await existingUsername(username, '_id');
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                msg: 'Error: username unavailable',
-            });
-        }
+        // check if user exists with username, email, or countryCode + phoneNumber
+        const existingUser = await User.findOne({
+            $or: [
+                { username: username },
+                { email: email },
+                { countryCode: countryCode, phoneNumber: phoneNumber }
+            ]
+        }, 'username email countryCode phoneNumber').lean();
 
-        // check if email taken
-        existingUser = await existingEmail(email, '_id');
+        // return error if existing user
         if (existingUser) {
+            let msg;
+            if (existingUser.username === username) {
+                msg = `username '${username}' unavailable`;
+            } else if (existingUser.email === email) {
+                msg = `email '${email}' unavailable`;
+            } else if (existingUser.phoneNumber === phoneNumber) {
+                msg = `phone '+${countryCode} ${phoneNumber}' unavailable`;
+            }
             return res.status(409).json({
                 success: false,
-                MEMEMEMEmsg: 'Error: email unavailable', });
-        }
-
-        // check if phone taken
-        existingUser = await existingPhone(`${countryCode} ${phoneNumber}`, '_id');
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                msg: 'Error: phone unavailable',
+                msg: `Error: ${msg}`
             });
         }
 
         // hash password
-        hashedPassword = await bcrypt.hash(password, parseInt(process.env.SALT_ROUNDS));
+        hashedPassword = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SALT_ROUNDS));
 
         // save user to database
         const user = new User({
@@ -67,14 +62,10 @@ router.route('/login').post( async (req, res) => {
         });
         const userDoc = await user.save();
 
-        // create JWT
-        const token = genAccessToken(username, userDoc._id);
-
         // return success
         return res.status(200).json({
             success: true,
             msg: `${username} successfully registered`,
-            token: token,
             user: { _id: user._id, username: user.username },
         });
 
