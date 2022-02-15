@@ -86,10 +86,10 @@ services:
         service: api
     restart: always
     environment:
+      API_PORT: ${API_PORT}
       API_DB_USER: ${API_DB_USER}
       API_DB_PASSWORD: ${API_DB_PASSWORD}
       DATABASE: ${DATABASE}
-      API_PORT: ${API_PORT}
       MONGO_DB_HOSTNAME: ${MONGO_DB_HOSTNAME}
       MONGO_DB_PORT: ${MONGO_DB_PORT}
       JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET}
@@ -114,6 +114,43 @@ services:
       - "traefik.http.routers.api.tls.certresolver=leresolver"
         # tell service which port (in container) to route trafic to
       - "traefik.http.services.api.loadbalancer.server.port=${API_PORT}"
+        
+  static_serving:
+    build:
+      context: src
+      args:
+        service: static_serving
+    restart: always
+    environment:
+      STATIC_STORAGE: ${STATIC_STORAGE}
+      STATIC_SERVING_PORT: ${STATIC_SERVING_PORT}
+      STATIC_SERVING_DB_USER: ${STATIC_SERVING_DB_USER}
+      STATIC_SERVING_DB_PASSWORD: ${STATIC_SERVING_DB_PASSWORD}
+      DATABASE: ${DATABASE}
+      MONGO_DB_HOSTNAME: ${MONGO_DB_HOSTNAME}
+      MONGO_DB_PORT: ${MONGO_DB_PORT}
+      JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+    depends_on:
+        - "db"
+    networks:
+      - traefik-proxy
+    volumes:
+      - "/app/node_modules"
+      - "${STATIC_STORAGE}:/static"
+    labels:
+        # enable traefik auto discovery
+      - "traefik.enable=true"
+        # entry point for router
+      - "traefik.http.routers.static.entrypoints=websecure"
+        # rule which router will route requests from
+      - "traefik.http.routers.static.rule=Host(`static.${DOMAIN}`)"
+        # enable tls for router
+      - "traefik.http.routers.static.tls=true"
+        # specify cert resolver for router
+      - "traefik.http.routers.static.tls.certresolver=leresolver"
+        # tell service which port (in container) to route trafic to
+      - "traefik.http.services.static.loadbalancer.server.port=${STATIC_SERVING_PORT}"
 
 networks:
     traefik-proxy:

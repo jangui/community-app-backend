@@ -16,3 +16,15 @@ services:
       - "./src/api/db.js:/app/db.js"
       - "./src/schemas:/app/schemas"
       - "./src/utils:/app/utils"
+
+  static_serving:
+    command: "npm run dev"
+    ports:
+      - "${STATIC_SERVING_PORT}:${STATIC_SERVING_PORT}"
+    volumes:
+      - "./src/static_serving/routes:/app/routes/"
+      - "./src/static_serving/controllers:/app/controllers/"
+      - "./src/static_serving/server.js:/app/server.js"
+      - "./src/static_serving/db.js:/app/db.js"
+      - "./src/schemas:/app/schemas"
+      - "./src/utils:/app/utils"
