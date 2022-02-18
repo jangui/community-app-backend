@@ -36,8 +36,8 @@ router.route('/').post( async (req, res) => {
         // check if email is verified
         if (!user.verifiedEmail) {
             return res.status(401).json({
-                success: false,
-                msg: 'Error: email is not verified',
+                success: true,
+                msg: 'Successful login',
                 verifiedEmail: false,
                 email: user.email
             });
@@ -51,6 +51,7 @@ router.route('/').post( async (req, res) => {
             success: true,
             msg: `${username} successfully logged in`,
             user: {_id: user._id, username: username},
+            verifiedEmail: true,
             token: token
         });
 
