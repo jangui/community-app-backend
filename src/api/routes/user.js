@@ -9,8 +9,10 @@ const {
     getFriendRequests,
     acceptFriendRequest,
     rejectFriendRequest,
+    cancelFriendRequest,
     removeFriend,
-    getFeed
+    getFeed,
+    getCommunities
 } = require('../controllers/userController');
 
 const router = express.Router();
@@ -39,11 +41,19 @@ router.route('/accept/friendRequest/').post(acceptFriendRequest);
 // reject a friend request
 router.route('/reject/friendRequest/').post(rejectFriendRequest);
 
+// TODO
+// cancel a friend request
+router.route('/cancel/friendRequest/').post(cancelFriendRequest);
+
 // remove a friend
 router.route('/remove/friend/').post(removeFriend);
 
 // get current user's feed
 router.route('/feed').post(getFeed);
+
+// TODO
+// get a user's communities
+router.route('/communities').post(getCommunities);
 
 module.exports = router;
 

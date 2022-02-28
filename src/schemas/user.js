@@ -62,7 +62,7 @@ const userSchema = new Schema({
     verifiedPhone: {type: Boolean, default: false},
 
     // profile picture
-    profilePicture: {type: mongoose.Schema.Types.ObjectId, ref: 'ImageModel'},
+    profilePicture: {type: mongoose.Schema.Types.ObjectId, ref: 'StaticFile'},
 
     // array of Users which are friends
     friends: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],

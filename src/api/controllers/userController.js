@@ -1,13 +1,9 @@
 const bcrypt = require('bcrypt');
 
-const User = require('../models/User.model.js');
-const Post = require ('../models/Post.model.js');
-
-const {
-    existingUsername,
-    areFriendsID,
-    hasFriendReqID
-} = require('../utils/user.js');
+const { User, Post } = require('../db.js');
+const { uploadFile } = require('../utils/upload.js');
+const { genAccessToken } = require('../utils/auth.js');
+const { includesID } = require('../utils/includesID.js');
 
 // get a user's info
 const getUser = async (req, res) => {
@@ -17,23 +13,10 @@ const getUser = async (req, res) => {
         const desiredUsername = req.params.username;
 
         // get desired user info
-        const desiredUser = (await User.aggregate([
-            { $match: {
-                "username": desiredUser,
-            }},
-            { $project: {
-                "_id": "$_id",
-                "username": "$username",
-                "name": "$name",
-                "image": "$image",
-                "open": "$open",
-                "visible": "$visible",
-                "memberVisibility": "$memberVisibility",
-                "friendsCount": {$size: "$friends"},
-                "postCount": {$size: "$posts"},
-                "friendRequests": "$friendRequests",
-            }},
-        ]))[0];
+        const desiredUser = await User.findOne(
+            {username: desiredUsername},
+            'username name profilePicture posts friends friendRequests'
+        ).lean().populate('profilePicture', 'fileType');
 
         if (!(desiredUser)) {
             return res.status(400).json({
@@ -42,24 +25,44 @@ const getUser = async (req, res) => {
             });
         }
 
-        let friendReq = false;
-        let friends = false;
         if (currentUser !== desiredUsername) {
-            // check if they sent us a friend requsts
-            friendReq = await hasFriendReqID(currentUserID, desiredUser._id);
+            let hasFriendReq = false;
+            let sentFriendReq = false;
+            let friends = false;
 
-            if (!friendReq) {
-                // check if we're friends
-                friends = await areFriendsID(currentUserID, desiredUserID);
+            // check if users are friends
+            if (includesID(currentUserID, desiredUser.frineds)) { friends = true }
+
+            // check if either user has sent a friend request
+            if (!friends) {
+                // check if desired user has sent us a friend request
+                if (includesID(currentUserID, desiredUser.friendRequests)) { hasFriendReq = true }
+
+                // check if we have sent desired user a friend request
+                const user = await User.findById(currentUserID, 'friendRequests').lean();
+                if (includesID(desiredUser._id, user.friendRequests)) { sentFriendReq = true }
             }
-        }
-        desiredUser.friendReq = friendReq;
-        desiredUser.friends = friends;
 
+            // add friend ship and request status to object we are returning
+            desiredUser.areFriends = friends;
+            desiredUser.hasFriendReq = hasFriendReq;
+            desiredUser.sentFriendReq = sentFriendReq;
+        }
+
+        // add friends and post count to desiredUser obj
+        desiredUser.friendsCount = desiredUser.friends.length;
+        desiredUser.postCount = desiredUser.posts.length;
+
+        // remove fields from object we are returning
+        delete desiredUser.friendRequests;
+        delete desiredUser.friends;
+        delete desiredUser.posts;
+
+        // return success
         return res.status(200).json({
             success: true,
-            msg: `successfully got ${desiredUser}`,
-            user: user,
+            msg: `successfully got ${desiredUsername}`,
+            user: desiredUser,
         });
 
     } catch(err) {
@@ -77,20 +80,33 @@ const editUser = async (req, res) => {
         const currentUserID = res.locals.userID;
 
 
-        // get user obj
-        const user = await User.findByid(currentUserID);
+        // get auth token ( in case of username change )
+        const authHeader = req.headers['authorization'];
+        let token = authHeader && authHeader.split(' ')[1];
+
+        // get user doc
+        const user = await User.findById(currentUserID).populate('profilePicture', '_id fileType');
+        if (!user) {
+            return res.status(500).json({
+                success: false,
+                msg: `Error: error getting user details`,
+            })
+        }
 
         // update username
         if (req.body.username) {
             // check if username valid
-            const existingUser = await existingUsername(req.body.username);
-            if (existingUser) {
+            const takenUser = await User.findOne({username: req.body.username}).lean();
+            if (takenUser) {
                 return res.status(400).json({
                     success: false,
                     msg: `Error: username '${req.body.username}' is not available`,
                 })
             }
             user.username = req.body.username;
+
+            // gen access token for new username
+            token = await genAccessToken(currentUserID, req.body.username);
         }
 
         // update name
@@ -119,25 +135,37 @@ const editUser = async (req, res) => {
         }
 
         // update profile image
-        if (req.files.image) { // TODO
-            // delete old image if there is one
-            //if (user.profilePicture) {
-                // TODO delete old image
-            //}
-            // upload new image
-            //const imageID = await uploadImage(currentUserID, true, false, null, req, res);
-            //user.image = imageID;
+        let staticFileData = user.profilePicture;
+        if (req.files && req.files.profilePicture) {
+            // TODO delete old image if there is one
+            const staticFile = req.files.profilePicture;
+            staticFileData = await uploadFile(staticFile, currentUserID, true, false, null, req, res);
+            user.profilePicture = staticFileData._id;
         }
 
         // save
         const userDoc = await user.save();
+
+        // if we updated profile picture, add all profile picture data to updated user document
+        if (req.files && req.files.profilePicture) {
+            userDoc.profilePicture = staticFileData;
+        }
+
+
+        // return user w/ updated info
         return res.status(200).json({
             success: true,
             msg: `Successfully updated user`,
             user: {
                 _id: userDoc._id,
-                username: userDoc.username
-            }
+                username: userDoc.username,
+                name: userDoc.name,
+                email: userDoc.email,
+                countryCode: userDoc.countryCode,
+                phoneNumber: userDoc.phoneNumber,
+                profilePicture: staticFileData,
+            },
+            token: token,
         });
 
     } catch(err) {
@@ -151,7 +179,7 @@ const editUser = async (req, res) => {
 // delete current user
 const deleteUser = async (req, res) => {
     try {
-        const currentUSer = res.locals.username;
+        const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
 
         // delete user
@@ -185,11 +213,23 @@ const getFriends = async (req, res) => {
         const currentUserID = res.locals.userID;
         const desiredUsername = req.body.username;
 
+        let sameUser = false;
+        if (currentUser === desiredUsername) { sameUser = true }
+
         // check other user exits
-        const desiredUser = await existingUsername(desiredUsername, '_id friends');
+        const desiredUser = await User.findOne(
+            {username: desiredUsername},
+            'friends')
+        .lean().populate('friends', 'username friends');
+        if (!(desiredUser)) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${desiredUsername} does not exist`,
+            });
+        }
 
         // check if we are friends with desired user
-        if (currentUser !== desiredUser && !(await areFriendsID(currentUserID, desiredUser._id))) {
+        if (!(sameUser) && !(includesID(currentUserID, desiredUser.friends))) {
             return res.status(401).json({
                 success: false,
                 msg: `Error: ${currentUser} cannot get ${desiredUsername}'s friends`,
@@ -200,20 +240,18 @@ const getFriends = async (req, res) => {
         const limit = parseInt(req.body.limit);
 
         // get friends
-        friendIDs = desiredUser.friends.slice(skip, skip+limit+1);
+        const friends = desiredUser.friends.slice(skip, skip+limit);
 
-        // get username and friendship status for each friend
-        let friends = []
-        friendsIDS.map(async (id) => {
-            const areFriends = await areFriendsID(currentUserID, id);
-            const userDoc = await User.findById(id, 'username');
-            const friend = {username: userDoc.username, areFriends: areFriends};
-            friends.push(friend);
+        // check current user's friendship status with each of desired User's friends
+        friends.map(async (friend) => {
+            if (sameUser) { friend.areFriends = true; return; }
+            if (includesID(currentUserID, friend.friends)) { friend.areFriends = true; return; }
+            friend.areFriend = false;
         });
 
         return res.status(200).json({
             success: true,
-            msg: `successfully got friends ${skip}-${limit+skip} for ${desiredUser}`,
+            msg: `successfully got friends ${skip}-${limit+skip-1} for ${desiredUsername}`,
             friends: friends,
         });
 
@@ -233,18 +271,24 @@ const sendFriendRequest = async (req, res) => {
         const desiredUsername = req.body.username;
 
         // check if we're sending ourselves a friend req
-        if (currentUser === desiredUser) {
+        if (currentUser === desiredUsername) {
             return res.status(400).json({
                 success: false,
                 msg: `Error: cannot send yourself a friend request`,
             });
         }
 
-        // check if other user exists
-        const desiredUser = await existingUsername(desiredUser, '_id');
+        // check other user exits
+        const desiredUser = await User.findOne({username: desiredUsername}, 'friends friendRequests').lean();
+        if (!(desiredUser)) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${desiredUsername} does not exist`,
+            });
+        }
 
         // check if we're sending a friend a friend req
-        if (await areFriendsID(currentUserID, desiredUser._id)) {
+        if (includesID(currentUserID, desiredUser.friends)) {
             return res.status(400).json({
                 success: false,
                 msg: `Error: ${currentUser} and ${desiredUsername} are already friends`,
@@ -252,15 +296,16 @@ const sendFriendRequest = async (req, res) => {
         }
 
         // check if we already sent a friend req
-        if (await hasFriendReqID(desiredUser._id, currentUserID)) {
+        if (includesID(currentUserID, desiredUser.friendRequests)) {
             return res.status(400).json({
                 success: false,
-                msg: `Error: ${currentUser} already send ${desiredUsername} a friend request`,
+                msg: `Error: ${currentUser} already sent ${desiredUsername} a friend request`,
             });
         }
 
         // check if they sent us a friend requsts
-        if (await hasFriendReqID(currentUserID, desiredUser._id)) {
+        const user = await User.findById(currentUserID, 'friendRequests').lean();
+        if (includesID(desiredUser._id, user.friendRequests)) {
             return res.status(400).json({
                 success: false,
                 msg: `Error: ${desiredUsername} already sent ${currentUser} a friend request`,
@@ -292,21 +337,17 @@ const getFriendRequests = async (req, res) => {
         const skip = parseInt(req.body.skip);
         const limit = parseInt(req.body.limit);
 
-        // get friend requests
-        const user = await User.findById(currentUserID, 'friendRequests').lean()
-        friendRequests = user.friendRequests.slice(skip, skip+limit+1);
-
-        // get username for each friend
-        let friendUsernames = []
-        friendsIDS.map(async (id) => {
-            const friend = await User.findById(id, 'username');
-            friendUsernames.push(friendUsername);
-        });
+        // get current user's friend reqs
+        const user = await User.findById(
+            currentUserID,
+            'friendRequests'
+        ).lean().populate('friendRequests', 'username');
+        friendRequests = user.friendRequests.slice(skip, skip+limit);
 
         return res.status(200).json({
             success: true,
-            msg: `successfully got friend requests ${skip}-${limit+skip} for ${currentUser}`,
-            friendRequests: friendUsernames,
+            msg: `successfully got friend requests ${skip}-${limit+skip-1} for ${currentUser}`,
+            friendRequests: friendRequests,
         });
 
     } catch(err) {
@@ -333,18 +374,25 @@ const acceptFriendRequest = async (req, res) => {
         }
 
         // check desired user exists
-        const desiredUser = await existingUser(desiredUsername, '_id');
+        const desiredUser = await User.findOne({username: desiredUsername}, 'friends').lean();
+        if (!desiredUser) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${desiredUsername} does not exists`,
+            });
+        }
 
         // fail if already friends
-        if ((await areFriendsID(currentUserID, desiredUser._id))) {
+        if (includesID(currentUserID, desiredUser.friends)) {
             return res.status(400).json({
                 success: false,
                 msg: `Error: ${currentUser} and ${desiredUsername} are already friends`,
             });
         }
 
-        // check if we have a friend request to accept
-        if (!( await hasFriendRequestID(currentUserId, desiredUser._id))) {
+        // make sure we have a friend request to accept
+        const user = await User.findById(currentUserID, 'friendRequests').lean();
+        if (!(includesID(desiredUser._id, user.friendRequests))) {
             return res.status(401).json({
                 success: false,
                 msg: `Error: no friend request from ${desiredUsername}. Cannot add friend`,
@@ -353,7 +401,7 @@ const acceptFriendRequest = async (req, res) => {
 
         // remove friendRequest
         await User.findByIdAndUpdate(currentUserID,
-            { $pull: { friendRequests: newFriendID }}
+            { $pull: { friendRequests: desiredUser._id }}
         );
 
         // add new friend to current user's friends
@@ -386,20 +434,36 @@ const rejectFriendRequest = async (req, res) => {
         const currentUserID = res.locals.userID;
         const desiredUsername = req.body.username;
 
+        // check if we are rejecting our own friend req
+        if (currentUser === desiredUsername) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: cannot reject friend request from yourself`,
+            });
+
+        }
+
         // check other user exists
-        const desiredUser = existingUsername(desiredUsername, '_id');
+        const desiredUser = await User.findOne({username: desiredUsername}, 'username').lean();
+        if (!(desiredUser)) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: ${desiredUsername} does not exists`,
+            });
+        }
 
         // check if we have a friend request from the user
-        if (!(await hasFriendRequestID(currentUserId, desiredUser._id))) {
-            return res.status(401).json({
+        const user = await User.findById(currentUserID, 'friendRequests').lean();
+        if (!(includesID(desiredUser._id, user.friendRequests))) {
+            return res.status(400).json({
                 success: false,
                 msg: `Error: no friend request from ${desiredUsername}. Cannot cancel request`,
             });
         }
 
         // reject friend request
-        await User.findByIdAndUpdate(desiredUser._id,
-            { $pull: { friendRequests: currentUserID }}
+        await User.findByIdAndUpdate(currentUserID,
+            { $pull: { friendRequests: desiredUser._id }}
         );
         return res.status(200).json({
             success: false,
@@ -413,6 +477,9 @@ const rejectFriendRequest = async (req, res) => {
         });
     }
 }
+
+// TODO
+const cancelFriendRequest = async (req, res) => {}
 
 // remove a friend
 const removeFriend = async (req, res) => {
@@ -430,10 +497,16 @@ const removeFriend = async (req, res) => {
         }
 
         // check other user exists
-        const desiredUser = await existingUsername(desiredUsername, '_id');
+        const desiredUser = await User.findOne({username: desiredUsername}, 'friends').lean();
+        if (!desiredUser) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${desiredUsername} does not exists`,
+            });
+        }
 
         // check if we are friends
-        if (!(await areFriends(currentUserID, desiredUser._id))) {
+        if (!includesID(currentUserID, desiredUser.friends)) {
             return res.status(400).json({
                 success: false,
                 msg: `Error: ${currentUser} and ${desiredUsername} are not friends`,
@@ -469,13 +542,6 @@ const getFeed = async (req, res) => {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
 
-        /*
-         TODO is populate better? can we populate with a skip and limit?
-        const user = await User.findById(currentUserID).populate({
-            path: 'friends',
-        });
-        */
-
         // get friends
         const user = await User.findById(currentUserID, 'friends');
         const friends = user.friends;
@@ -484,7 +550,7 @@ const getFeed = async (req, res) => {
         const limit = parseInt(req.body.limit);
 
         // get posts from our friends
-        // TODO this is super inneficient
+        // TODO this is super inneficient, use activity table instead
         let feed = await Post.find({owner: {$in: friends}}).sort('timestamp').skip(skip).limit(limit).lean();
 
         for (let i = 0; i < feed.length; ++i) {
@@ -499,7 +565,7 @@ const getFeed = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            msg: `Successfully got feed`,
+            msg: `Successfully got feed elements ${skip}-${limit+skip-1}`,
             feed: feed
         });
 
@@ -512,6 +578,10 @@ const getFeed = async (req, res) => {
 
 }
 
+// TODO
+// get a user's communities
+const getCommunities = async (req, res) => {}
+
 exports.getUser = getUser;
 exports.editUser = editUser;
 exports.deleteUser = deleteUser;
@@ -520,5 +590,7 @@ exports.sendFriendRequest = sendFriendRequest;
 exports.getFriendRequests = getFriendRequests;
 exports.acceptFriendRequest = acceptFriendRequest;
 exports.rejectFriendRequest = rejectFriendRequest;
+exports.cancelFriendRequest = cancelFriendRequest;
 exports.removeFriend = removeFriend;
 exports.getFeed = getFeed;
+exports.getCommunities = getCommunities;
