@@ -101,6 +101,7 @@ services:
       - traefik-proxy
     volumes:
       - "/app/node_modules"
+      - "${STATIC_STORAGE}:/static"
     labels:
         # enable traefik auto discovery
       - "traefik.enable=true"

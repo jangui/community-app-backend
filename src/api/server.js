@@ -1,16 +1,16 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const multer = require('multer');
+const fileUpload = require('express-fileupload');
 
 const { conn } = require('./db.js');
 
 // check env vars set
 if (!(
-    process.env.API_DB_USER
+    process.env.API_PORT
+    && process.env.API_DB_USER
     && process.env.API_DB_PASSWORD
     && process.env.DATABASE
-    && process.env.API_PORT
     && process.env.MONGO_DB_HOSTNAME
     && process.env.MONGO_DB_PORT
     && process.env.JWT_TOKEN_SECRET
@@ -25,6 +25,7 @@ if (!(
 const app = express();
 const port = process.env.API_PORT;
 app.use(cors());
+app.use(fileUpload());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -40,13 +41,13 @@ const { authUser } = require('./utils/middlewares.js');
 const registerRouter = require('./routes/register.js');
 app.use('/register', registerRouter);
 
-/*
 const loginRouter = require('./routes/login.js');
 app.use('/login', loginRouter);
 
 const userRouter = require('./routes/user.js');
 app.use('/user', authUser, userRouter);
 
+/*
 const postRouter = require('./routes/post.js');
 app.use('/post', authUser, postRouter);
 

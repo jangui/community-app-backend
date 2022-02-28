@@ -1,45 +1,45 @@
-const mongoose = require('mongoose');
 
-const ImageModel = require('../models/ImageModel.model');
+const { StaticFile } = require('../db.js');
 
-const uploadImage = (owner, isPublic, communityImage, community, req, res) => {
+const uploadFile = (staticFile, owner, isPublic, communityFile, community, req, res) => {
     return new Promise( async (resolve, reject) => {
         try {
             // check if files received
-            if (!(req.files.image)) {
+            if (!(staticFile)) {
                 reject("Error: no files to upload");
                 return;
             }
 
-            // create image
-            const image = new ImageModel({
-                userImage: userImage,
-                isPublic: isPublic,
+            // get file type
+            const fileType = staticFile.mimetype.split("/")[1];
+
+            // check if valid file
+            if (!validFile(fileType)) {
+                reject("invalid file type");
+            }
+
+            // create file
+            const file = new StaticFile({
                 owner: owner,
+                isPublic: isPublic,
+                fileType: fileType,
             });
 
             // set community if applicable
-            if (communityImage) {
-                image.communityImage = true;
-                image.community = mongoose.Types.ObjectId(community);
+            if (communityFile) {
+                staticFile.communityFile = true;
+                staticFile.community = mongoose.Types.ObjectId(community);
             }
 
-            // save image details to db
-            const imageDoc = await image.save();
-            const imageID = imageDoc._id;
+            // save file details to db
+            const staticFileDoc = await file.save();
+            const fileID = staticFileDoc._id;
 
-            // make sure img directory set
-            const imageDirectory = process.env.IMAGE_DIR;
-            if (!imageDirectory) {
-                rej("Error: image directory env var not set");
-                return;
-            }
+            // store uploaded file
+            staticFile.mv(`/static/${fileID}.${fileType}`);
 
-            // store uploaded image
-            req.files.image.mv(`${imageDirectory}/${owner}/${imageID}`);
-
-            // resolve proimse w/ image id on success
-            resolve(imageID);
+            // resolve proimse w/ image doc
+            resolve({_id: fileID, fileType: fileType});
 
         } catch(err) {
             reject(err);
@@ -47,4 +47,19 @@ const uploadImage = (owner, isPublic, communityImage, community, req, res) => {
     });
 };
 
-exports.uploadImage = uploadImage;
+const validFile = (fileType) => {
+    switch(fileType) {
+        case "png":
+        case "jpeg":
+        case "jpg":
+        case "gif":
+        case "mp4":
+        case "mpeg":
+        case "mp2t":
+            return true;
+        default:
+            return false;
+    }
+}
+
+exports.uploadFile = uploadFile;
