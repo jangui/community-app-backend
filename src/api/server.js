@@ -47,9 +47,9 @@ app.use('/login', loginRouter);
 const userRouter = require('./routes/user.js');
 app.use('/user', authUser, userRouter);
 
-/*
 const postRouter = require('./routes/post.js');
 app.use('/post', authUser, postRouter);
+/*
 
 const communityRouter = require('./routes/community.js');
 app.use('/community', authUser, communityRouter);

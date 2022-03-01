@@ -11,6 +11,7 @@ const {
     getComments,
     editComment,
     deleteComment,
+    getLikes,
     likePost,
     unlikePost
 } = require('../controllers/postController');
@@ -18,15 +19,14 @@ const {
 // create post
 router.route('/new').post(createPost);
 
-// TODO
 // get a post's info
-//router.route('/:postID').get(getPost);
+router.route('/:postID').get(getPost);
 
 // edit post
 router.route('/edit/').post(editPost);
 
 // delete post
-router.route('/:postID').delete(deletePost);
+router.route('/').delete(deletePost);
 
 // comment on post
 router.route('/comment/').post(makeComment);
@@ -38,7 +38,10 @@ router.route('/comments/').post(getComments);
 router.route('/edit/comment/').post(editComment);
 
 // delete comment
-router.route('/delete/comment/').post(deleteComment);
+router.route('/comment/').delete(deleteComment);
+
+// get post likes
+router.route('/likes/').post(getLikes);
 
 // like post
 router.route('/like/').post(likePost);

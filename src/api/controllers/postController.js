@@ -1,12 +1,6 @@
-const User = require('../models/User.model.js');
-const Post = require ('../models/Post.model.js');
-
-const {
-    existingUsername,
-    areFriendsID,
-    areFriendsUsername,
-} = require('../utils/user.js');
-
+const { User, Post, PostComment, PostLike } = require('../db.js');
+const { uploadFile } = require('../utils/upload.js');
+const { includesID } = require('../utils/includesID.js');
 
 // create post
 const createPost = async (req, res) => {
@@ -17,6 +11,10 @@ const createPost = async (req, res) => {
         const postText = req.body.postText;
         const postLocation = req.body.postLocation;
 
+        // get static file
+        let staticFile;
+        if (req.files) { staticFile = req.files.postFile; }
+
         // create post
         let post = new Post({
             owner: currentUserID,
@@ -26,12 +24,11 @@ const createPost = async (req, res) => {
         });
 
         // upload image
-        /* TODO
-        if (postType === '1' && req.files.image) {
-            const imageID = await uploadImage(currentUserID, req, res);
-            post.image = imageID;
+        let staticFileData;
+        if (postType === '1' && staticFile) {
+            staticFileData = await uploadFile(staticFile, currentUserID, true, false, null, req, res);
+            post.postFile = staticFileData._id;
         }
-        */
 
         // add location if provided
         if (postLocation) {post.postLocation = postLocation}
@@ -43,10 +40,17 @@ const createPost = async (req, res) => {
             { $push: { posts: postDoc._id }}
         );
 
+        // return post info on success
         return res.status(200).json({
             success: true,
             msg: 'Successfully made post',
-            post: { _id: postDoc._id },
+            post: {
+                _id: postDoc._id,
+                postType: postType,
+                postLocation: postLocation,
+                postText: postText,
+                postFile: staticFileData,
+            },
         });
 
     } catch(err) {
@@ -58,40 +62,91 @@ const createPost = async (req, res) => {
 }
 
 // get a post's info
-const getPost = async (req, res) => {}
+const getPost = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const postID = req.params.postID;
+
+        // check post exists
+        const post = await Post
+            .findById(postID, 'owner postLocation postText postFile')
+            .lean()
+            .populate('postFile', 'fileType')
+            .populate('owner', 'friends');
+
+        if (!post) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: Post w/ id '${postID}' does not exist`,
+            });
+        }
+
+        // check current user is friends w/ post owner or is owner of post
+        if (!(currentUserID == post.owner._id) && (!includesID(currentUserID, post.owner.friends))) {
+            return res.status(403).json({
+                success: false,
+                msg: `Error: Unauthorized. ${currentUser} cannot like ${post.owner.username}'s post`,
+            });
+        }
+
+        // unpopulate owner field from post
+        post.owner = post.owner._id
+
+        return res.status(200).json({
+            success: true,
+            msg: `Success! Post ${postID} updated.`,
+            post: post,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+
+}
 
 // edit a post
 const editPost = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
+        const postID = req.body.postID;
         const postText = req.body.postText;
         const postLocation = req.body.postLocation;
-        const postID = req.params.postID;
+
+        // get static file
+        let staticFile;
+        if (req.files) { staticFile = req.files.postFile; }
+
+        // check post exists
+        const post = await Post.findById(postID, 'owner postLocation postText');
+        if (!post) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: Post w/ id '${postID}' does not exist`,
+            });
+        }
 
         // make sure we are editing our own post
-        const oldPost = await Post.findById(postID, 'owner postLocation postText').lean();
-        if (oldPost.owner.toString() !== currentUserID) {
-            return res.status(409).json({
+        if (post.owner.toString() !== currentUserID) {
+            return res.status(403).json({
                 success: false,
                 msg: `Error: Unauthorized. ${currentUser} does not own post ${postID}`,
             });
         }
 
-        // get post updates
-        if (!postLocation) { postLocation = oldPost.postLocation }
-        if (!postText) { postText = oldPost.postText }
-
-        // update posts
-        const updatedPost = await Post.findByIdAndUpdate(postID, {
-            postLocation: postLocation,
-            postText: postText,
-        }).select('owner _id postText postLocation postType timestamp').lean();
+        // update post
+        if (postLocation) { post.postLocation = postLocation }
+        if (postText) { post.postText = postText; }
+        await post.save();
 
         return res.status(200).json({
             success: true,
             msg: `Success! Post ${postID} updated.`,
-            post: updatedPost,
+            post: post,
         });
 
     } catch(err) {
@@ -107,12 +162,21 @@ const deletePost = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const postID = req.params.postID;
+        const postID = req.body.postID;
+
+        // check post exists
+        const post = await Post.findById(postID, 'owner').lean();
+        if (!post) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: Post w/ id '${postID}' does not exist`,
+            });
+        }
+
 
         // make sure we are deleting our own post
-        const post = await Post.findById(postID, 'owner').lean();
         if (post.owner.toString() !== currentUserID) {
-            return res.status(409).json({
+            return res.status(403).json({
                 success: false,
                 msg: `Error: Unauthorized. ${currentUser} does not own post ${postID}`,
             });
@@ -123,7 +187,7 @@ const deletePost = async (req, res) => {
 
         // TODO
         // delete all likes and comments
-        // remove image
+        // remove static files
 
         return res.status(200).json({
             success: true,
@@ -146,19 +210,27 @@ const makeComment = async (req, res) => {
         const postID = req.body.postID;
         const comment = req.body.comment;
 
-        // check post owner and current user are friends
-        const post = await Post.findById(postID, 'owner').lean();
-        if (!areFriendsID(currentUserID, post.owner)) {
-            return res.status(409).json({
+        // check post exists
+        const post = await Post.findById(postID, 'owner').lean().populate('owner', 'username friends');
+        if (!post) {
+            return res.status(400).json({
                 success: false,
-                msg: `Error: Unauthorized. ${currentUser} cannot comment on ${postID}`,
+            msg: `Error: post with id '${postID}' does not exist.`,
+            })
+        }
+
+        // check post owner and current user are friends
+        let ownsPost = false;
+        if (post.owner.username != currentUser && (!includesID(currentUserID, post.owner.friends))) {
+            return res.status(403).json({
+                success: false,
+                msg: `Error: Unauthorized. ${currentUser} cannot comment on ${post.owner.username}'s posts`,
             });
         }
 
         // make comment
         const postComment = new PostComment({
             owner: currentUserID,
-            username: currentUser,
             post: postID,
             comment: comment
         });
@@ -174,7 +246,7 @@ const makeComment = async (req, res) => {
         return res.status(200).json({
             success: true,
             msg: `Success! ${currentUser} commented on post ${postID}`,
-            comment: {_id: postCommentID},
+            comment: postCommentDoc,
         });
 
     } catch(err) {
@@ -188,42 +260,39 @@ const makeComment = async (req, res) => {
 // get post comments
 const getComments = async (req, res) => {
     try {
-        const currentUser = res.locals.currentUsername;
+        const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
         const postID = req.body.postID;
-
-        // check current user is friends with post owner
-        const post = await Post.findById(postID, 'owner').lean();
-        if (!(areFriendsID(currentUserID, post.owner))) {
-            return res.status(409).json({
-                success: false,
-                msg: `Error ${currentUser} cannot get post ${postID}'s comments`
-            });
-        }
-
         const skip = parseInt(req.body.skip);
         const limit = parseInt(req.body.limit);
 
+        // check post exists
+        const post = await Post.findById(postID, 'owner comments').lean().populate('owner', 'username friends');
+        if (!post) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: post with id '${postID}' does not exist.`,
+            });
+        }
+
+        // check we own post or are friends w/ owner of post
+        if (!(post.owner._id == currentUserID) && !(includesID(currentUserID, post.owner.friends))) {
+            return res.status(403).json({
+                success: false,
+                msg: `Error ${currentUser} cannot get comments for ${post.owner.username}'s post`
+            });
+        }
+
         // get comments
-        const comments = await PostComment.aggregate([
-            { $match: {
-                post: mongoose.Types.ObjectId(postID),
-            }},
-            { $skip: skip},
-            { $limit: limit},
-            { $sort: { timestamp: 1 }},
-            { $project: {
-                "_id": "$_id",
-                "username": "$username",
-                "userID": "$owner",
-                "comment": "$comment",
-                "timestamp": "$timestamp",
-            }},
-        ]);
+        const comments = await PostComment.find(
+            { post: post._id }
+        ).sort(
+            { timestamp: 1 }
+        ).skip(skip).limit(limit).lean().populate('owner', 'username');
 
         return res.status(200).json({
             success: true,
-            msg: `successfully got post comments ${skip}-${limit+skip} for post ${postID}`,
+            msg: `successfully got post comments ${skip}-${limit+skip-1} for post ${postID}`,
             comments: comments,
         });
     } catch(err) {
@@ -232,7 +301,6 @@ const getComments = async (req, res) => {
             msg: `Error: ${err}`
         });
     }
-
 }
 
 // edit a comment
@@ -259,11 +327,12 @@ const editComment = async (req, res) => {
                 msg: `Error: comment ${commentID} does not exists`,
             });
         }
-        // check current user own's comment they want to update
-        if (comment.owner.toString() !== userID) {
-            return res.status(409).json({
+
+        // check current user is editting their own comment
+        if (comment.owner.toString() !== currentUserID) {
+            return res.status(403).json({
                 success: false,
-                msg: `Error: user ${currentUser} cannot edit someone else's comment`,
+                msg: `Error: ${currentUser} cannot edit someone else's comment`,
             });
         }
 
@@ -295,7 +364,7 @@ const deleteComment = async (req, res) => {
         // make sure we are deleting our own comment
         const comment = await PostComment.findById(commentID, 'owner').lean();
         if (comment.owner.toString() !== currentUserID) {
-            return res.status(409).json({
+            return res.status(403).json({
                 success: false,
                 msg: `Error: Unauthorized. ${currentUser} does not own comment ${commentID}`,
             });
@@ -317,6 +386,53 @@ const deleteComment = async (req, res) => {
     }
 }
 
+const getLikes = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const postID = req.body.postID;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        // check post exists
+        const post = await Post.findById(postID, 'owner comments').lean().populate('owner', 'username friends');
+        if (!post) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: post with id '${postID}' does not exist.`,
+            });
+        }
+
+        // check we own post or are friends w/ owner of post
+        if (!(post.owner._id == currentUserID) && !(includesID(currentUserID, post.owner.friends))) {
+            return res.status(403).json({
+                success: false,
+                msg: `Error ${currentUser} cannot get comments for ${post.owner.username}'s post`
+            });
+        }
+
+        // get likes
+        const likes = await PostLike.find(
+            { post: post._id }
+        ).sort(
+            { timestamp: 1 }
+        ).skip(skip).limit(limit).lean().populate('owner', 'username');
+
+        // return likes
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got post likes ${skip}-${limit+skip-1} for post ${postID}`,
+            likes: likes,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+}
+
 // like a post
 const likePost = async (req, res) => {
     try {
@@ -324,27 +440,40 @@ const likePost = async (req, res) => {
         const currentUserID = res.locals.userID;
         const postID = req.body.postID;
 
-        // check current user is friends w/ post owner
-        const post = await Post.findById(postID, 'owner').lean();
-        if (!areFriendsID(currentUserID, post.owner)) {
-            return res.status(409).json({
+        // check post exists
+        const post = await Post
+                .findById(postID, 'owner likes')
+                .lean()
+                .populate('likes', 'owner')
+                .populate('owner', 'friends username');
+        if (!post) {
+            return res.status(400).json({
                 success: false,
-                msg: `Error: Unauthorized. ${currentUser} cannot like post ${postID}`,
+                msg: `Error: post with id '${postID}' does not exist.`,
+            });
+        }
+
+        // check current user is friends w/ post owner or is owner of post
+        if (!(currentUserID == post.owner._id) && (!includesID(currentUserID, post.owner.friends))) {
+            return res.status(403).json({
+                success: false,
+                msg: `Error: Unauthorized. ${currentUser} cannot like ${post.owner.username}'s post`,
             });
         }
 
         // check if post already liked
-        var like = await PostLike.findOne({post: postID, owner: currentUserID}, '_id').lean();
-        if (like) {
-            return res.status(400).json({
-                success: false,
-                msg: `Error! ${currentUser} already likes post ${postID}`,
-            });
+        for (let i = 0; i < post.likes.length; ++i) {
+            if (post.likes[i].owner == currentUserID) {
+                return res.status(400).json({
+                    success: false,
+                    msg: `Error! ${currentUser} already likes post ${postID}`,
+                });
+            }
         }
 
         // create like
         like = new PostLike({
-            owner: userID,
+            owner: currentUserID,
             username: currentUser,
             post: postID,
         });
@@ -357,7 +486,7 @@ const likePost = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            msg: `Success! ${currentUser} liked post ${postID}`,
+            msg: `Success! ${currentUser} liked post with id '${postID}`,
         });
 
     } catch(err) {
@@ -375,18 +504,36 @@ const unlikePost = async (req, res) => {
         const currentUserID = res.locals.userID;
         const postID = req.body.postID;
 
-        // check users are friends
-        const post = await Post.findById(postID, 'owner likes').lean();
-        if (!areFriendsID(currentUserID, post.owner)) {
-            return res.status(409).json({
+        // check post exists
+        const post = await Post
+                .findById(postID, 'owner likes')
+                .lean()
+                .populate('likes', 'owner')
+                .populate('owner', 'friends username');
+        if (!post) {
+            return res.status(400).json({
                 success: false,
-                msg: `Error: Unauthorized. ${currentUser} cannot like post ${postID}`,
+                msg: `Error: post with id '${postID}' does not exist.`,
             });
         }
 
-        // check if post not liked
-        var like = await PostLike.findOne({post: postID, owner: currentUserID}, '_id').lean();
-        if (!like) {
+        // check current user is friends w/ post owner or is owner of post
+        if (!(currentUserID == post.owner._id) && (!includesID(currentUserID, post.owner.friends))) {
+            return res.status(403).json({
+                success: false,
+                msg: `Error: Unauthorized. ${currentUser} cannot unlike ${post.owner.username}'s post`,
+            });
+        }
+
+        // check if post already liked
+        let likesPost = false;
+        for (let i = 0; i < post.likes.length; ++i) {
+            if (post.likes[i].owner == currentUserID) {
+                likesPost = true;
+                break;
+            }
+        }
+        if (!likesPost) {
             return res.status(400).json({
                 success: false,
                 msg: `Error! ${currentUser} does not like post ${postID}`,
@@ -394,11 +541,11 @@ const unlikePost = async (req, res) => {
         }
 
         // delete like
-        await PostLike.findOneAndDelete({owner: currentUserID, post: postID});
+        like = await PostLike.findOneAndDelete({owner: currentUserID, post: postID});
 
-        // remove like to post
+        // remove like from post
         await Post.findByIdAndUpdate(postID,
-            { $pull: { likes: currentUserID }}
+            { $pull: { likes: like._id }}
         );
 
         return res.status(200).json({
@@ -422,5 +569,6 @@ exports.makeComment = makeComment;
 exports.getComments = getComments;
 exports.editComment = editComment;
 exports.deleteComment = deleteComment;
+exports.getLikes = getLikes;
 exports.likePost = likePost;
 exports.unlikePost = unlikePost;

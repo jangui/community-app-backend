@@ -12,7 +12,7 @@ const postSchema = new Schema({
     // array of comments on the post
     comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'PostComment'}],
 
-    // post type: 0 == text post; 1 == picture post;
+    // post type: 0 == text post; 1 == picture / video post;
     postType: {type: Number, min: 0, max: 1, required: true},
 
     // text for text post OR caption for picture post
@@ -21,14 +21,12 @@ const postSchema = new Schema({
     // location of post
     postLocation: {type: String, trim: true},
 
-    // the post's picture (if applicable)
-    image: {type: mongoose.Schema.Types.ObjectId, ref: 'ImageModel'},
+    // the post's picture / video (if applicable)
+    postFile: {type: mongoose.Schema.Types.ObjectId, ref: 'StaticFile'},
 
     // post timestamp
     timestamp: {type: Date, default: Date.now(), index: true, required: true },
 
 });
 
-const Post = mongoose.model('Post', postSchema);
-
-module.exports = Post;
+module.exports = postSchema;
