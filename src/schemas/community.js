@@ -20,7 +20,7 @@ const communitySchema = new Schema({
     },
 
     // community picture
-    image: {type: mongoose.Schema.Types.ObjectId, ref: 'ImageModel'},
+    communityPicture: {type: mongoose.Schema.Types.ObjectId, ref: 'StaticFile'},
 
     // community privacy
     // open == true (public); open == false (private)
@@ -43,6 +43,4 @@ const communitySchema = new Schema({
 
 });
 
-const Community = mongoose.model('Community', communitySchema);
-
-module.exports = Community;
+module.exports = communitySchema;

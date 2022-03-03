@@ -82,7 +82,7 @@ const editUser = async (req, res) => {
 
         // get auth token ( in case of username change )
         const authHeader = req.headers['authorization'];
-        let token = authHeader && authHeader.split(' ')[1];
+        let accessToken = authHeader && authHeader.split(' ')[1];
 
         // get user doc
         const user = await User.findById(currentUserID).populate('profilePicture', '_id fileType');
@@ -106,7 +106,7 @@ const editUser = async (req, res) => {
             user.username = req.body.username;
 
             // gen access token for new username
-            token = await genAccessToken(currentUserID, req.body.username);
+            accessToken = await genAccessToken(currentUserID, req.body.username);
         }
 
         // update name
@@ -165,7 +165,7 @@ const editUser = async (req, res) => {
                 phoneNumber: userDoc.phoneNumber,
                 profilePicture: staticFileData,
             },
-            token: token,
+            accessToken: accessToken,
         });
 
     } catch(err) {
@@ -212,6 +212,8 @@ const getFriends = async (req, res) => {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
         const desiredUsername = req.body.username;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
 
         let sameUser = false;
         if (currentUser === desiredUsername) { sameUser = true }
@@ -235,9 +237,6 @@ const getFriends = async (req, res) => {
                 msg: `Error: ${currentUser} cannot get ${desiredUsername}'s friends`,
             });
         }
-
-        const skip = parseInt(req.body.skip);
-        const limit = parseInt(req.body.limit);
 
         // get friends
         const friends = desiredUser.friends.slice(skip, skip+limit);
@@ -541,13 +540,12 @@ const getFeed = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
 
         // get friends
         const user = await User.findById(currentUserID, 'friends');
         const friends = user.friends;
-
-        const skip = parseInt(req.body.skip);
-        const limit = parseInt(req.body.limit);
 
         // get posts from our friends
         // TODO this is super inneficient, use activity table instead
@@ -559,8 +557,8 @@ const getFeed = async (req, res) => {
             // calculate likes total
             feed[i].likesCount = feed[i].likes.length;
             // only send over first 3 comments and likes
-            feed[i].comments = feed[i].comments.slice(0, 3);
-            feed[i].likes = feed[i].likes.slice(0, 3);
+            delete feed[i].comments;
+            delete feed[i].likes;
         }
 
         return res.status(200).json({
@@ -575,12 +573,56 @@ const getFeed = async (req, res) => {
             msg: `Error:  ${err}`,
         });
     }
-
 }
 
 // TODO
 // get a user's communities
-const getCommunities = async (req, res) => {}
+const getCommunities = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const desiredUsername = req.body.username;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        let sameUser = false;
+        if (currentUser === desiredUsername) { sameUser = true }
+
+        // check other user exits
+        const desiredUser = await User.findOne(
+            {username: desiredUsername},
+            'communities')
+        .lean().populate('communities', 'name');
+        if (!(desiredUser)) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${desiredUsername} does not exist`,
+            });
+        }
+
+        // check if we are friends with desired user
+        if (!(sameUser) && !(includesID(currentUserID, desiredUser.friends))) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: ${currentUser} cannot get ${desiredUsername}'s communities`,
+            });
+        }
+
+        // get communities
+        const communities = desiredUser.communities.slice(skip, skip+limit);
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got communities ${skip}-${limit+skip-1} for ${desiredUsername}`,
+            communities: communities,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error:  ${err}`,
+        });
+    }
+}
 
 exports.getUser = getUser;
 exports.editUser = editUser;
