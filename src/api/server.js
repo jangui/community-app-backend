@@ -44,6 +44,9 @@ app.use('/register', registerRouter);
 const loginRouter = require('./routes/login.js');
 app.use('/login', loginRouter);
 
+const verifyRouter = require('./routes/verify.js');
+app.use('/verify', verifyRouter);
+
 const userRouter = require('./routes/user.js');
 app.use('/user', authUser, userRouter);
 

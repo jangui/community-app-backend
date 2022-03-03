@@ -9,7 +9,7 @@ const { authenticateToken } = require('./auth.js');
 const authUser = async (req, res, next) => {
     try {
         // verify the token
-        const token = authenticateToken(req);
+        const token = await authenticateToken(req.headers);
 
         // add the user ID and username in the req object which we pass along
         res.locals.userID = token.payload.userID;

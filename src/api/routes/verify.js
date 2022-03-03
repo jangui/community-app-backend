@@ -1,47 +1,22 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
 
 const { User } = require('../db.js');
 const { genAccessToken } = require('../utils/auth.js');
 
 const router = express.Router();
 
-// login
+// verify
 router.route('/').post( async (req, res) => {
     try {
         const username = req.body.username;
-        const password = req.body.password;
+        const verificationCode = req.body.verificationCode;
 
-        // check user exists
-        const user = await User.findOne({username: username}, 'password email verifiedEmail');
+        // verify
+        const user = await User.findOneAndUpdate({username: username}, {verifiedEmail: true}).lean();
         if (!user) {
             return res.status(400).json({
                 success: false,
                 msg: 'Error: invalid login', // purposely ambigious
-            });
-        }
-
-        // get password
-        const hashedPassword = user.password;
-
-        // check if password valid
-        const match = await bcrypt.compare(password, hashedPassword);
-        if(!(match)) {
-            return res.status(400).json({
-                success: false,
-                msg: 'Error: invalid login', // purposely ambigious
-            });
-        }
-
-        // check if email is verified
-        if (!user.verifiedEmail) {
-            return res.status(401).json({
-                success: true,
-                msg: 'Successful login',
-                user: '',
-                verifiedEmail: false,
-                email: user.email,
-                accessToken: '',
             });
         }
 
@@ -51,7 +26,7 @@ router.route('/').post( async (req, res) => {
         // return success
         return res.status(200).json({
             success: true,
-            msg: `${username} successfully logged in`,
+            msg: `${username} email verified`,
             user: {_id: user._id, username: username},
             verifiedEmail: true,
             email: user.email,
