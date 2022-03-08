@@ -41,7 +41,6 @@ router.route('/accept/friendRequest/').post(acceptFriendRequest);
 // reject a friend request
 router.route('/reject/friendRequest/').post(rejectFriendRequest);
 
-// TODO
 // cancel a friend request
 router.route('/cancel/friendRequest/').post(cancelFriendRequest);
 

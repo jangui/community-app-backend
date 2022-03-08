@@ -439,7 +439,6 @@ const rejectFriendRequest = async (req, res) => {
                 success: false,
                 msg: `Error: cannot reject friend request from yourself`,
             });
-
         }
 
         // check other user exists
@@ -456,7 +455,7 @@ const rejectFriendRequest = async (req, res) => {
         if (!(includesID(desiredUser._id, user.friendRequests))) {
             return res.status(400).json({
                 success: false,
-                msg: `Error: no friend request from ${desiredUsername}. Cannot cancel request`,
+                msg: `Error: no friend request from ${desiredUsername}. Cannot reject request`,
             });
         }
 
@@ -477,8 +476,53 @@ const rejectFriendRequest = async (req, res) => {
     }
 }
 
-// TODO
-const cancelFriendRequest = async (req, res) => {}
+const cancelFriendRequest = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const desiredUsername = req.body.username;
+
+        // check if we are rejecting our own friend req
+        if (currentUser === desiredUsername) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: cannot cancel friend request from yourself`,
+            });
+        }
+
+        // check other user exists
+        const desiredUser = await User.findOne({username: desiredUsername}, 'username friendRequests').lean();
+        if (!(desiredUser)) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: ${desiredUsername} does not exists`,
+            });
+        }
+
+        // check if we send a friend request to the user
+        if (!(includesID(currentUserID, desiredUser.friendRequests))) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: no friend request to ${desiredUsername}. Cannot cancel request`,
+            });
+        }
+
+        // cancel friend request
+        await User.findByIdAndUpdate(desiredUser._id,
+            { $pull: { friendRequests: currentUserID }}
+        );
+        return res.status(200).json({
+            success: false,
+            msg: `Successfully cancelled friend request to ${desiredUsername}`,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error:  ${err}`,
+        });
+    }
+}
 
 // remove a friend
 const removeFriend = async (req, res) => {
