@@ -1,7 +1,9 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
 const { User }  = require('../db.js');
+const { uploadFile } = require('../utils/upload.js');
 
 const router = express.Router();
 
@@ -51,8 +53,9 @@ router.route('/').post( async (req, res) => {
         // hash password
         hashedPassword = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SALT_ROUNDS));
 
-        // save user to database
+        // create user obj
         const user = new User({
+            _id: mongoose.Types.ObjectId(),
             username: username,
             password: hashedPassword,
             name: name,
@@ -60,13 +63,23 @@ router.route('/').post( async (req, res) => {
             countryCode: countryCode,
             phoneNumber: phoneNumber
         });
+
+        // add profile picture
+        let staticFileData;
+        if (req.files && req.files.profilePicture) {
+            const staticFile = req.files.profilePicture;
+            staticFileData = await uploadFile(staticFile, user._id, true, false, null, req, res);
+            user.profilePicture = staticFileData._id;
+        }
+
+        // save user to database
         const userDoc = await user.save();
 
         // return success
         return res.status(200).json({
             success: true,
             msg: `${username} successfully registered`,
-            user: { _id: user._id, username: user.username },
+            user: { _id: user._id, username: user.username, profilePicture: staticFileData },
         });
 
     } catch(err) {

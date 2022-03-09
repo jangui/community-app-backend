@@ -31,7 +31,7 @@ const getUser = async (req, res) => {
             let friends = false;
 
             // check if users are friends
-            if (includesID(currentUserID, desiredUser.frineds)) { friends = true }
+            if (includesID(currentUserID, desiredUser.friends)) { friends = true }
 
             // check if either user has sent a friend request
             if (!friends) {

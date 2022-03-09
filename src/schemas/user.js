@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
+    // explicity defining object id
+    // object ids MUST be explicity generated when creating a new user
+    _id: mongoose.Types.ObjectId,
+
     // username
     username: {
         type: String,

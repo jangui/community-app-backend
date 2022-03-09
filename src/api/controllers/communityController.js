@@ -1,8 +1,8 @@
-const Community = require('../models/Community.model.js');
+const mongoose = require('mongoose');
 
-const {
-    existingUsername,
-} = require('../utils/user.js');
+const { User, Community } = require('../db.js');
+const { uploadFile } = require('../utils/upload.js');
+const { includesID } = require('../utils/includesID.js');
 
 // create a community
 const createCommunity = async (req, res) => {
@@ -12,22 +12,23 @@ const createCommunity = async (req, res) => {
         const communityName = req.body.name;
         const description = req.body.description;
         const open = req.body.open;
-        const visible = req.body.visible;
+        const hidden = req.body.hidden;
 
         // check if community already exists
         const found = await Community.findOne({name: communityName});
         if (found) {
             return res.status(400).json({
                 success: false,
-                msg: `Error: ${communityName} already exists.`
+                msg: `Error: Community with name '${communityName}' already exists.`
             });
         }
 
         // create community
         let community = new Community({
+            _id: mongoose.Types.ObjectId(),
             name: communityName,
             open: open,
-            visibile: visible,
+            hidden: hidden,
             owners: [currentUserID],
             members: [currentUserID],
         });
@@ -36,14 +37,13 @@ const createCommunity = async (req, res) => {
         if (description) {
             community.description = description;
         }
-
-        // add image if provided
-        /* TODO
-        if (req.files && req.files.image) {
-            const imageID = await uploadImage(currentUser, req, res);
-            community.image = imageID;
+        // add community image
+        let staticFileData = "";
+        if (req.files && req.files.communityImage) {
+            const staticFile = req.files.communityImage;
+            staticFileData = await uploadFile(staticFile, currentUserID, true, true, community._id, req, res);
+            community.communityImage = staticFileData._id
         }
-        */
 
         // save to database
         const communityDoc = await community.save();
@@ -51,7 +51,7 @@ const createCommunity = async (req, res) => {
         return res.status(200).json({
             success: true,
             msg: `Successfully created community ${communityName}`,
-            community: { _id: communityDoc._id, name: communityDoc.name},
+            community: { _id: communityDoc._id, name: communityDoc.name, communityImage: staticFileData },
         });
 
     } catch(err) {

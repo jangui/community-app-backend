@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const communitySchema = new Schema({
+    // explicity defining object id
+    // object ids MUST be explicity generated when creating a new community
+    _id: mongoose.Types.ObjectId,
+
     // community name
     name: {
         type: String,
@@ -19,15 +23,15 @@ const communitySchema = new Schema({
         trim: true,
     },
 
-    // community picture
-    communityPicture: {type: mongoose.Schema.Types.ObjectId, ref: 'StaticFile'},
+    // community image
+    communityImage: {type: mongoose.Schema.Types.ObjectId, ref: 'StaticFile'},
 
     // community privacy
     // open == true (public); open == false (private)
     open: {type: Boolean, default: false},
 
     // community visibility
-    visible: {type: Boolean, default: true},
+    hidden: {type: Boolean, default: false},
 
     // array of community outings
     outings: [{type: mongoose.Schema.Types.ObjectId, ref: 'Outing'}],
@@ -41,6 +45,8 @@ const communitySchema = new Schema({
     // array of users wanting to join community (only if private)
     memberRequests: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
 
+    // remove id field
+    // ids should be generated when saving a document
 });
 
 module.exports = communitySchema;

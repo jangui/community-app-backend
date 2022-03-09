@@ -1,4 +1,3 @@
-
 const { StaticFile } = require('../db.js');
 
 const uploadFile = (staticFile, owner, isPublic, communityFile, community, req, res) => {
@@ -15,7 +14,7 @@ const uploadFile = (staticFile, owner, isPublic, communityFile, community, req, 
 
             // check if valid file
             if (!validFile(fileType)) {
-                reject("invalid file type");
+                reject(`invalid file type ${fileType}`);
             }
 
             // create file
@@ -28,7 +27,7 @@ const uploadFile = (staticFile, owner, isPublic, communityFile, community, req, 
             // set community if applicable
             if (communityFile) {
                 staticFile.communityFile = true;
-                staticFile.community = mongoose.Types.ObjectId(community);
+                staticFile.community = community;
             }
 
             // save file details to db

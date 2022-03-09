@@ -41,5 +41,5 @@ exports.Post = Post;
 exports.PostComment = PostComment;
 exports.PostLike = PostLike;
 
-exports.Community;
+exports.Community = Community;
 

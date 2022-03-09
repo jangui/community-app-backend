@@ -52,11 +52,11 @@ app.use('/user', authUser, userRouter);
 
 const postRouter = require('./routes/post.js');
 app.use('/post', authUser, postRouter);
-/*
 
 const communityRouter = require('./routes/community.js');
 app.use('/community', authUser, communityRouter);
 
+/*
 const outingRouter = require('./routes/outing.js');
 app.use('/outing', authUser, outingRouter);
 
