@@ -231,7 +231,16 @@ const getFriends = async (req, res) => {
         }
 
         // check if we are friends with desired user
-        if (!(sameUser) && !(includesID(currentUserID, desiredUser.friends))) {
+        let friendship = false;
+        for (let i = 0; i < desiredUser.friends.length; ++i) {
+            if (desiredUser.friends[i]._id.toString() == currentUserID) {
+                friendship = true;
+                break;
+            }
+        }
+
+        // check if we have permissions to get friends
+        if (!sameUser && !friendship) {
             return res.status(401).json({
                 success: false,
                 msg: `Error: ${currentUser} cannot get ${desiredUsername}'s friends`,
@@ -242,11 +251,37 @@ const getFriends = async (req, res) => {
         const friends = desiredUser.friends.slice(skip, skip+limit);
 
         // check current user's friendship status with each of desired User's friends
-        friends.map(async (friend) => {
-            if (sameUser) { friend.areFriends = true; return; }
-            if (includesID(currentUserID, friend.friends)) { friend.areFriends = true; return; }
-            friend.areFriend = false;
+        let currentUserInd = -1;
+        friends.map(async (friend, ind) => {
+            // if user is getting their own friends, we know they are friends with all their friends
+            if (sameUser) {
+                friend.areFriends = true;
+                delete friend.friends; // dont return friend's friend's
+                delete friend._id // dont return friend's friend's id
+                return;
+            }
+
+            // get the index of current user in their friend's list
+            if (friend._id == currentUserID) {
+                currentUserInd = ind;
+                return;
+            }
+
+            // check if user is friends with the friends of the desiredUser
+            if (includesID(currentUserID, friend.friends)) {
+                friend.areFriends = true;
+                delete friend.friends; // dont return friend's friend's
+                delete friend._id // dont return friend's friend's id
+                return; }
+
+            friend.areFriends = false;
+            delete friend.friends; // dont return friend's friend's
+            delete friend._id // dont return friend's friend's id
         });
+
+        // remove current user from friends' list
+        console.log(currentUserInd);
+        if (currentUserInd != -1) { friends.splice(currentUserInd, 1); }
 
         return res.status(200).json({
             success: true,

@@ -286,9 +286,18 @@ const getComments = async (req, res) => {
         // get comments
         const comments = await PostComment.find(
             { post: post._id }
+        ).select(
+            'comment owner'
         ).sort(
             { timestamp: 1 }
-        ).skip(skip).limit(limit).lean().populate('owner', 'username');
+        ).skip(skip).limit(limit).lean().populate({
+            path: 'owner',
+            select: 'username -_id',
+            populate: {
+                path: 'profilePicture',
+                select: 'fileType',
+            }
+        });
 
         return res.status(200).json({
             success: true,
@@ -403,8 +412,13 @@ const getLikes = async (req, res) => {
             });
         }
 
-        // check we own post or are friends w/ owner of post
-        if (!(post.owner._id == currentUserID) && !(includesID(currentUserID, post.owner.friends))) {
+        // check if we are post owner
+        let postOwner = false;
+        if (post.owner._id == currentUserID) { postOwner = true; }
+
+        // check if we have permissions to get likes
+        // check if friends w/ owner of post
+        if (!postOwner && !(includesID(currentUserID, post.owner.friends))) {
             return res.status(403).json({
                 success: false,
                 msg: `Error ${currentUser} cannot get comments for ${post.owner.username}'s post`
@@ -414,9 +428,42 @@ const getLikes = async (req, res) => {
         // get likes
         const likes = await PostLike.find(
             { post: post._id }
+        ).select(
+            'owner -_id'
         ).sort(
             { timestamp: 1 }
-        ).skip(skip).limit(limit).lean().populate('owner', 'username');
+        ).skip(skip).limit(limit).lean().populate({
+            path: 'owner',
+            select: 'username friends -_id',
+            populate: {
+                path: 'profilePicture',
+                select: 'fileType',
+            },
+        });
+
+        // check friendship status with each person who likes post
+        likes.map(async (currentLike, ind) => {
+            // set like username and profile picture
+            currentLike.username = currentLike.owner.username;
+            currentLike.profilePicture = currentLike.owner.profilePicture;
+
+            // if current user owns the post, then they are friends with every user who liked the post
+            if (postOwner) {
+                currentLike.areFriends = true;
+                delete currentLike.owner; // dont return current like's owner's info
+                return;
+            }
+
+            // check if user is friends with the friends of the desiredUser
+            if (includesID(currentUserID, currentLike.owner.friends)) {
+                currentLike.areFriends = true;
+                delete currentLike.owner; // dont return current like's owner's info
+                return;
+            }
+
+            currentLike.areFriends = false;
+            delete currentLike.owner; // dont return current like's owner's info
+        });
 
         // return likes
         return res.status(200).json({
