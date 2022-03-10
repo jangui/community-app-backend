@@ -5,11 +5,14 @@ const {
     getCommunity,
     editCommunity,
     deleteCommunity,
+    getMembers,
     inviteUser,
+    acceptInvite,
     joinCommunity,
     acceptUser,
     leaveCommunity,
-    getOutings
+    getOutings,
+    searchCommunities
 } = require('../controllers/communityController');
 
 const router = express.Router();
@@ -20,29 +23,38 @@ router.route('/create').post(createCommunity);
 // get a community info
 router.route('/:community').get(getCommunity);
 
-// TODO
 // edit community info
-//router.route('/edit/').post(editCommunity);
+router.route('/edit/').post(editCommunity);
 
 // delete a community
-router.route('/:communityID').delete(deleteCommunity);
+router.route('/:community').delete(deleteCommunity);
+
+// get community members
+router.route('/members').post(getMembers);
 
 // invite user to community
 router.route('/invite').post(inviteUser);
+
+// accept community invite
+router.route('/accept/invite').post(acceptInvite);
 
 // join a community or send request if private
 router.route('/join').post(joinCommunity);
 
 // TODO
 // accpet user to private community
-//router.route('/accept/user').post(acceptUser);
+router.route('/accept/user').post(acceptUser);
 
 // leave a community
 router.route('/leave').post(leaveCommunity);
 
 // TODO
 // get community outings
-// router.route('/outings').get(getOutings);
+router.route('/outings').get(getOutings);
+
+// TODO
+// search for communities
+router.route('/search').post(searchCommunities);
 
 module.exports = router;
 
