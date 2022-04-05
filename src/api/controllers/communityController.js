@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const { User, Community } = require('../db.js');
+const { User, Community, Outing } = require('../db.js');
 const { uploadFile } = require('../utils/upload.js');
 const { includesID } = require('../utils/includesID.js');
 
@@ -244,8 +244,8 @@ const getMembers = async (req, res) => {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
         const communityName = req.body.community;
-        const skip = req.body.skip;
-        const limit = req.body.limit;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
 
         // get community
         const community = await Community.findOne(
@@ -271,16 +271,22 @@ const getMembers = async (req, res) => {
         // slice members according to how many requests
         members = community.members.slice(skip, skip+limit);
 
-        // add friendship status to each member
-        /* TODO
-        members.map(async (member) => {
-            if
-            if (includesID(currentUserID, friend.friends)) { friend.areFriends = true; return; }
-            friend.areFriend = false;
-        });
-        */
+        console.log(members[0]);
 
-        // return success
+        // add friendship status to each member
+        for (let i = 0; i < members.length; ++i) {
+            const member = members[i]
+            if (member.username == currentUser) { delete member.friends; continue; }
+            areFriends = false;
+
+            for (let j = 0; j < member.friends.length; ++j) {
+                const friend = member.friends[j];
+                if (friend.username == currentUser) { areFriends = true; break; }
+            }
+            member.areFriends = areFriends;
+            delete member.friends
+        }
+
         return res.status(200).json({
             success: true,
             msg: `successfully got members ${skip}-${limit+skip-1} for community '${communityName}'`,
@@ -429,7 +435,7 @@ const joinCommunity = async (req, res) => {
         const communityName = req.body.communityName;
 
         // check community exists
-        const community = await Community.findOne({name: communityName}, 'members open').lean();
+        const community = await Community.findOne({name: communityName}, 'members open memberRequests').lean();
         if (!community) {
             return res.status(409).json({
                 success: false,
@@ -437,23 +443,24 @@ const joinCommunity = async (req, res) => {
             });
         }
 
-        // check if we are a memmber
-        const members = community.members;
-        let isMember = false;
-        members.map(member => {
-            if (member.toString() === currentUserID) {
-                isMember = true; return;
-            }
-        });
-        if (isMember) {
+        // check user already a member
+        if (includesID(currentUserID, community.members)) {
             return res.status(400).json({
                 success: false,
-                msg: `Error: ${currentUser} is already a member of ${communityName}`
+                msg: `Error: ${currentUser} is already a member of community '${communityName}'`
             });
         }
 
         // send community request if private
         if (!community.open) {
+            // check if we already sent member request
+            if (includesID(currentUserID, community.memberRequests)) {
+                return res.status(400).json({
+                    success: false,
+                    msg: `Error: ${currentUser} already sent a member request to community '${communityName}'`
+                });
+            }
+
             // send community request to join
             await Community.findByIdAndUpdate(community._id,
                 { $push: { memberRequests: currentUserID }}
@@ -489,16 +496,83 @@ const joinCommunity = async (req, res) => {
     }
 }
 
-// TODO
 // accept a user to a private community
-const acceptUser = async (req, res) => {}
+const acceptUser = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const communityName = req.body.community;
+        const invitedUsername = req.body.username;
+
+        // get user info
+        const invitedUser = await User.findOne({username: invitedUsername}, '_id').lean();
+        if (!invitedUser) {
+            return res.status(500).json({
+                success: false,
+                msg: `Error: ${invitedUsername} does not exists.`
+            });
+        }
+
+        // check community exists
+        const community = await Community.findOne({name: communityName}, 'memberRequests owners members').lean();
+        if (!community) {
+            return res.status(409).json({
+                success: false,
+                msg: `Error: ${communityName} does not exists`
+            });
+        }
+
+        // check community has a join request from user
+        if (!includesID(invitedUser._id, community.memberRequests)) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${invitedUsername} has not requested to join community '${communityName}'`
+            });
+        }
+
+        // check user already a member
+        if (includesID(invitedUser._id, community.members)) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${invitedUsername} is already a member of community '${communityName}'`
+            });
+        }
+
+        // check if we have permisions to accept user
+        if (!includesID(currentUserID, community.owners)) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: insufficient permissions to accept join requests for community ${communityName}`
+            });
+        }
+
+        // add user to community and remove member request
+        await Community.findOneAndUpdate({name: communityName}, {
+            $push: { members: invitedUser._id },
+            $pull: { memberRequests: invitedUser._id },
+        });
+
+        // return success
+        return res.status(200).json({
+            success: true,
+            msg: `successfully accepted invite to community '${communityName}'`,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+}
+
 
 // leave communtiy
 const leaveCommunity = async (req, res) => {
     try {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
-        const communityName = req.body.communityName;
+        const communityName = req.body.community;
 
         // check community exists
         const community = await Community.findOne({name: communityName}, 'owners members').lean();
@@ -509,31 +583,17 @@ const leaveCommunity = async (req, res) => {
             });
         }
 
-        // check we own the community
-        const owners = community.owners;
-        let own = false;
-        owners.map(owner => {
-            if (owner.toString() === currentUserID) {
-                own = true; return;
-            }
-        });
-        if (own) {
-            return res.status(409).json({
+        // check if we own the community
+        if (includesID(currentUserID, community.owners)) {
+            return res.status(401).json({
                 success: false,
-                msg: `Error: Cannot leave a community you own.`
+                msg: `Error: Cannot leave a community you own`
             });
         }
 
         // check if we are a memmber
-        const members = community.members;
-        let isMember = false;
-        members.map(member => {
-            if (member.toString() === currentUserID) {
-                isMember = true; return;
-            }
-        });
-        if (!isMember) {
-            return res.status(400).json({
+        if (!includesID(currentUserID, community.members)) {
+            return res.status(401).json({
                 success: false,
                 msg: `Error: Cannot leave a community you are not part of.`
             });
@@ -555,7 +615,7 @@ const leaveCommunity = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            msg: `Succesfully delete community ${communityName}`,
+            msg: `Succesfully left community ${communityName}`,
         });
 
     } catch(err) {
@@ -566,12 +626,99 @@ const leaveCommunity = async (req, res) => {
     }
 }
 
-// TODO
 // get community's outings
-const getOutings = async (req, res) => {}
+const getOutings = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const communityName = req.body.community;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
 
-// TODO
-const searchCommunities = async (req, res) => {}
+        // get community
+        const community = await Community.findOne({name: communityName},'_id').lean();
+
+        // check if community exists
+        if (!community) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: community '${communityName}' does not exist.`
+            });
+        }
+
+        // get outings for community
+        const outings = await Outing.find(
+            { community: community._id },
+            'owner title canRSVP visibleRSVP location start end attendees interested comments polls timestamp',
+        ).sort(
+            { timestamp: 1 },
+        ).skip(skip).limit(limit).lean();
+
+        // modify return data
+        outings.forEach( (outing) => {
+            outing.attendees = outing.attendees.length;
+            outing.interested = outing.interested.length;
+            outing.comments = outing.comments.length;
+        });
+
+
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got outings ${skip}-${limit+skip-1} for community '${communityName}'`,
+            outings: outings,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+}
+
+const searchCommunities = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const searchQuery = req.body.search;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        // search
+        const communities = await Community
+            .find(
+                { name: {"$regex": searchQuery, "$options": "i" } },
+                 'name description open hidden communityImage members'
+            ).skip(skip)
+            .limit(limit)
+            .lean()
+            .populate('communityImage', 'fileType');
+
+        if (!communities) {
+            return res.status(500).json({
+                success: false,
+                msg: `Error: error searching for communities.`
+            });
+        }
+
+        // calc member count per community
+        communities.forEach( (community) => {
+            community.members = community.members.length;
+        });
+
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got results ${skip}-${limit+skip-1} for community search '${searchQuery}'`,
+            communities: communities,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+}
 
 exports.createCommunity = createCommunity;
 exports.getCommunity = getCommunity;

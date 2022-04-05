@@ -41,18 +41,15 @@ router.route('/accept/invite').post(acceptInvite);
 // join a community or send request if private
 router.route('/join').post(joinCommunity);
 
-// TODO
-// accpet user to private community
+// accept user to private community
 router.route('/accept/user').post(acceptUser);
 
 // leave a community
 router.route('/leave').post(leaveCommunity);
 
-// TODO
 // get community outings
-router.route('/outings').get(getOutings);
+router.route('/outings').post(getOutings);
 
-// TODO
 // search for communities
 router.route('/search').post(searchCommunities);
 

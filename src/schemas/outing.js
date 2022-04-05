@@ -18,7 +18,7 @@ const outingSchema = new Schema({
     end: {type: Date, default: Date(1970, 0, 1, 0, 0, 0, 0)},
 
     // location of outing
-    loc: {type: String, trim: true, default: ""},
+    location: {type: String, trim: true, default: ""},
 
     // can users RSVP
     canRSVP: {type: Boolean, default: false},
@@ -42,6 +42,4 @@ const outingSchema = new Schema({
     timestamp: {type: Date, default: Date.now(), index: true},
 });
 
-const Outing = mongoose.model('Outing', outingSchema);
-
-module.exports = Outing;
+module.exports = outingSchema;

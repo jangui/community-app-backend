@@ -44,9 +44,6 @@ const communitySchema = new Schema({
 
     // array of users wanting to join community (only if private)
     memberRequests: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
-
-    // remove id field
-    // ids should be generated when saving a document
 });
 
 module.exports = communitySchema;
