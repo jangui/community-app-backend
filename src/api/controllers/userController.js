@@ -654,7 +654,6 @@ const getFeed = async (req, res) => {
     }
 }
 
-// TODO
 // get a user's communities
 const getCommunities = async (req, res) => {
     try {
@@ -670,8 +669,8 @@ const getCommunities = async (req, res) => {
         // check other user exits
         const desiredUser = await User.findOne(
             {username: desiredUsername},
-            'communities')
-        .lean().populate('communities', 'name');
+            'communities friends')
+        .lean().populate('communities', 'name open');
         if (!(desiredUser)) {
             return res.status(400).json({
                 success: false,
@@ -687,8 +686,9 @@ const getCommunities = async (req, res) => {
             });
         }
 
-        // get communities
+        // slice communities according to skip and limit params
         const communities = desiredUser.communities.slice(skip, skip+limit);
+
         return res.status(200).json({
             success: true,
             msg: `successfully got communities ${skip}-${limit+skip-1} for ${desiredUsername}`,

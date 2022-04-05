@@ -50,7 +50,6 @@ router.route('/remove/friend/').post(removeFriend);
 // get current user's feed
 router.route('/feed').post(getFeed);
 
-// TODO
 // get a user's communities
 router.route('/communities').post(getCommunities);
 

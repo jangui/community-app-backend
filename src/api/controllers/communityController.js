@@ -402,10 +402,11 @@ const acceptInvite = async (req, res) => {
             });
         }
 
-        // remove user invite
-        await User.findOneAndUpdate({username: currentUser},
-            { $pull: { communityRequests: community._id }}
-        );
+        // add community to user's communities and remove user invite
+        await User.findOneAndUpdate({username: currentUser}, {
+            $push: { communities: community._id },
+            $pull: { communityRequests: community._id },
+        });
 
         // add user to community
         await Community.findOneAndUpdate({name: communityName},
@@ -468,7 +469,7 @@ const joinCommunity = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
-                msg: `Succesfully send join request to community ${communityName}`,
+                msg: `Succesfully sent join request to community ${communityName}`,
             });
         }
 
@@ -542,7 +543,7 @@ const acceptUser = async (req, res) => {
         if (!includesID(currentUserID, community.owners)) {
             return res.status(401).json({
                 success: false,
-                msg: `Error: insufficient permissions to accept join requests for community ${communityName}`
+                msg: `Error: insufficient permissions to accept users into community '${communityName}'`
             });
         }
 
@@ -552,10 +553,15 @@ const acceptUser = async (req, res) => {
             $pull: { memberRequests: invitedUser._id },
         });
 
+        // community to user's communities
+        await User.findOneAndUpdate({username: invitedUsername}, {
+            $push: { communities: community._id },
+        });
+
         // return success
         return res.status(200).json({
             success: true,
-            msg: `successfully accepted invite to community '${communityName}'`,
+            msg: `successfully accepted user '${invitedUsername}' to community '${communityName}'`,
         });
 
     } catch(err) {
