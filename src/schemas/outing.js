@@ -14,8 +14,8 @@ const outingSchema = new Schema({
 
     // start and end time of outing
     // default is EPOCH as a placeholder for no time set
-    start: {type: Date, default: Date(1970, 0, 1, 0, 0, 0, 0)},
-    end: {type: Date, default: Date(1970, 0, 1, 0, 0, 0, 0)},
+    start: {type: Date, default: new Date(1970, 0, 1, 0, 0, 0, 0)},
+    end: {type: Date, default: new Date(1970, 0, 1, 0, 0, 0, 0)},
 
     // location of outing
     location: {type: String, trim: true, default: ""},
@@ -39,7 +39,7 @@ const outingSchema = new Schema({
     polls: [{type: mongoose.Schema.Types.ObjectId, ref: 'Poll'}],
 
     // outing timestamp
-    timestamp: {type: Date, default: Date.now(), index: true},
+    timestamp: {type: Date, default: Date.now(), index: true, required: true },
 });
 
 module.exports = outingSchema;

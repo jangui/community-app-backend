@@ -220,7 +220,6 @@ const makeComment = async (req, res) => {
         }
 
         // check post owner and current user are friends
-        let ownsPost = false;
         if (post.owner.username != currentUser && (!includesID(currentUserID, post.owner.friends))) {
             return res.status(403).json({
                 success: false,
@@ -404,7 +403,7 @@ const getLikes = async (req, res) => {
         const limit = parseInt(req.body.limit);
 
         // check post exists
-        const post = await Post.findById(postID, 'owner comments').lean().populate('owner', 'username friends');
+        const post = await Post.findById(postID, 'owner').lean().populate('owner', 'username friends');
         if (!post) {
             return res.status(400).json({
                 success: false,
@@ -421,7 +420,7 @@ const getLikes = async (req, res) => {
         if (!postOwner && !(includesID(currentUserID, post.owner.friends))) {
             return res.status(403).json({
                 success: false,
-                msg: `Error ${currentUser} cannot get comments for ${post.owner.username}'s post`
+                msg: `Error ${currentUser} cannot get likes for ${post.owner.username}'s post`
             });
         }
 

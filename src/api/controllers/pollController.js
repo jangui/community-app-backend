@@ -1,6 +1,6 @@
 
 const Poll = require('../models/Poll.model.js');
-const PollVote = require('../models/PollVote.model.js');
+const PollOption = require('../models/PollOption.model.js');
 const User = require('../models/User.model.js');
 
 // create a poll
@@ -12,16 +12,29 @@ const createPoll = async (req, res) => {
         const pollOptions = req.body.pollOptions;
         const community = req.body.communityID;
 
+        let pollOptionIDS = [];
+
+        // create poll options
+        pollOptions.forEach( async (opt) => {
+            const pollOption = new PollOption({
+                title: opt
+            });
+            // save poll option
+            pollOptDoc = await pollOption.save();
+            pollOptionIDS.push(pollOptDoc._id);
+        });
+
         // create poll
         const poll = new Poll({
             owner: currentUserID,
+            username: currentUser,
             community: communityID,
             title: title,
-            pollOptions: pollOptions,
+            pollOptions: pollOptionIDS,
         });
 
         // save poll to db
-        const pollDoc = poll.save;
+        const pollDoc = await poll.save();
 
         // return success
         return res.status(200).json({
@@ -45,8 +58,14 @@ const getPoll = async (req, res) => {
         const currentUserID = res.locals.userID;
         const pollID = req.body.pollID;
 
-        // check poll exists
-        let poll = await Poll.findById(pollID, 'title owner pollOptions community').lean();
+        // get poll
+        let poll = await Poll.findById(
+            pollID,
+            'title owner pollOptions community'
+        ).lean().populate({
+            path: 'pollOptions',
+            populate: { path: 'votes', select: 'username' }
+        });
 
         if (!poll) {
             return res.status(500).json({
@@ -64,8 +83,10 @@ const getPoll = async (req, res) => {
             });
         }
 
-        // TODO
         // get poll vote counts
+        poll.pollOptions.forEach((opt) => {
+            opt.votes = opt.votes.length;
+        });
 
         // return success
         return res.status(200).json({
@@ -130,7 +151,9 @@ const deletePoll = async (req, res) => {
 }
 
 // get poll votes
-const getVotes = async (req, res) => {}
+const getVotes = async (req, res) => {
+    // use aggregate, turn pollVotes into own models
+}
 
 // vote on poll
 const vote = async (req, res) => {}

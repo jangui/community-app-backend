@@ -6,10 +6,10 @@
   "dependencies": {
     "bcrypt": "^5.0.1",
     "cors": "^2.8.5",
-    "express": "^4.17.1",
+    "express": "^4.17.2",
     "express-fileupload": "^1.2.1",
     "jsonwebtoken": "^8.5.1",
-    "mongoose": "^5.12.3"
+    "mongoose": "^6.2.1"
   },
   "scripts": {
     "dev": "npx nodemon server",

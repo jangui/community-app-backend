@@ -6,9 +6,6 @@ const outingCommentSchema = new Schema({
     // user's ID that makes the comment
     owner: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
 
-    // the user's username
-    username: {type: String, trim: true, required: true, minLength: 1, maxLength: 30, required: true },
-
     // the outing the comment was made on
     outing: {type: mongoose.Schema.Types.ObjectId, ref: 'Outing', index: true},
 
@@ -19,6 +16,4 @@ const outingCommentSchema = new Schema({
     timestamp: {type: Date, default: Date.now(), index: true},
 });
 
-const OutingComment = mongoose.model('OutingComment', outingCommentSchema);
-
-module.exports = OutingComment;
+module.exports = outingCommentSchema;

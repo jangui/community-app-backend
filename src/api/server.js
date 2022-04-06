@@ -55,10 +55,10 @@ app.use('/post', authUser, postRouter);
 const communityRouter = require('./routes/community.js');
 app.use('/community', authUser, communityRouter);
 
-/*
 const outingRouter = require('./routes/outing.js');
 app.use('/outing', authUser, outingRouter);
 
+/*
 const pollRouter = require('./routes/poll.js');
 app.use('/poll', authUser, pollRouter);
 */

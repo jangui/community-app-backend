@@ -34,6 +34,12 @@ const Community = conn.model("Community", communitySchema);
 const outingSchema = require('./schemas/outing.js');
 const Outing = conn.model("Outing", outingSchema);
 
+const outingCommentSchema = require('./schemas/outingComment.js');
+const OutingComment = conn.model("OutingComment", outingCommentSchema);
+
+const outingAttendeeSchema = require('./schemas/outingAttendee.js');
+const OutingAttendee = conn.model("OutingAttendee", outingAttendeeSchema);
+
 // exports
 exports.conn = conn;
 exports.StaticFile = StaticFile;
@@ -47,4 +53,6 @@ exports.PostLike = PostLike;
 exports.Community = Community;
 
 exports.Outing = Outing;
+exports.OutingComment = OutingComment;
+exports.OutingAttendee = OutingAttendee;
 
