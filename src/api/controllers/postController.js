@@ -95,8 +95,64 @@ const getPost = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            msg: `Success! Post ${postID} updated.`,
+            msg: `Success! Got post with id '${postID}'.`,
             post: post,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`,
+        });
+    }
+}
+
+const getPosts = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const desiredUsername = req.body.username;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        let sameUser = false;
+        if (currentUser === desiredUsername) { sameUser = true }
+
+        // check desired user exits
+        const desiredUser = await User.findOne(
+            {username: desiredUsername},
+            'friends',
+        ).lean();
+
+        // check if current user friends w/ desired user
+        if (!sameUser && !includesID(currentUserID, desiredUser.friends)) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: ${currentUser} cannot get ${desiredUsername}'s posts`,
+            });
+        }
+
+        // get desired user's posts
+        const posts = await Post.find(
+            { owner: desiredUser._id },
+            'postText postLocation postType postFile comments likes',
+        ).populate(
+            'postFile', 'fileType'
+        ).sort(
+            { timestamp: 1 },
+        ).skip(skip).limit(limit).lean();
+
+        // modify return data
+        posts.forEach( (post) => {
+            post.likes = post.likes.length;
+            post.comments = post.comments.length;
+        });
+
+
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got posts # ${skip}-${limit+skip-1} for user '${desiredUsername}' `,
+            posts: posts,
         });
 
     } catch(err) {
@@ -107,7 +163,6 @@ const getPost = async (req, res) => {
     }
 
 }
-
 // edit a post
 const editPost = async (req, res) => {
     try {
@@ -609,6 +664,7 @@ const unlikePost = async (req, res) => {
 
 exports.createPost = createPost;
 exports.getPost = getPost;
+exports.getPosts = getPosts;
 exports.editPost = editPost;
 exports.deletePost = deletePost;
 exports.makeComment = makeComment;

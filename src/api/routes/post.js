@@ -5,6 +5,7 @@ const router = express.Router();
 const {
     createPost,
     getPost,
+    getPosts,
     editPost,
     deletePost,
     makeComment,
@@ -21,6 +22,9 @@ router.route('/new').post(createPost);
 
 // get a post's info
 router.route('/:postID').get(getPost);
+
+// get a user's posts
+router.route('/').post(getPosts);
 
 // edit post
 router.route('/edit/').post(editPost);
