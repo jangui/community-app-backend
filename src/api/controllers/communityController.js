@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const { User, Community, Outing } = require('../db.js');
+const { User, Post, Community, Outing } = require('../db.js');
 const { uploadFile } = require('../utils/upload.js');
 const { includesID } = require('../utils/includesID.js');
 
@@ -239,6 +239,75 @@ const deleteCommunity = async (req, res) => {
     }
 }
 
+const getPosts = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const communityName = req.body.community;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        // get community
+        const community = await Community.findOne(
+            { name: communityName },
+            'members -_id'
+        ).lean();
+
+        // check if community exists
+        if (!community) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${communityName} does not exist.`
+            });
+        }
+
+        // check current user is a memmber
+        if (!includesID(currentUserID, community.members)) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: Cannot get posts for community ${communityName}.`
+            });
+        }
+
+        // get community posts
+        //const posts = await Post.find({ community: community._id });
+        const posts = await Post
+            .find(
+                { community: community._id },
+                'owner comments likes postType postText start end postLocation postFile timestamp',
+            ).skip(skip).limit(limit).populate(
+                'postFile',
+                'fileType'
+            ).populate(
+                'owner',
+                'username',
+            ).sort(
+                { timestamp: -1 }
+            ).lean();
+
+        // modify return data
+        posts.forEach( (post) => {
+            post.likes = post.likes.length;
+            post.comments = post.comments.length;
+            post.owner = post.owner.username;
+            if (post.postLocation === "") { post.postLocation = null; }
+            if (post.postType === 0) { post.postFile = null; }
+        });
+
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got posts ${skip}-${limit+skip-1} for community '${communityName}'`,
+            posts: posts,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+}
+
 const getMembers = async (req, res) => {
     try {
         const currentUser = res.locals.username;
@@ -270,8 +339,6 @@ const getMembers = async (req, res) => {
 
         // slice members according to how many requests
         members = community.members.slice(skip, skip+limit);
-
-        console.log(members[0]);
 
         // add friendship status to each member
         for (let i = 0; i < members.length; ++i) {
@@ -642,7 +709,7 @@ const getOutings = async (req, res) => {
         const limit = parseInt(req.body.limit);
 
         // get community
-        const community = await Community.findOne({name: communityName},'_id').lean();
+        const community = await Community.findOne({name: communityName},'_id members').lean();
 
         // check if community exists
         if (!community) {
@@ -650,21 +717,34 @@ const getOutings = async (req, res) => {
                 success: false,
                 msg: `Error: community '${communityName}' does not exist.`
             });
+
+         // check if current user is a memmber
+        if (!includesID(currentUserID, community.members)) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: Cannot get outings for community ${communityName}.`
+            });
         }
+
+       }
 
         // get outings for community
         const outings = await Outing.find(
             { community: community._id },
             'owner title canRSVP visibleRSVP location start end attendees interested comments polls timestamp',
         ).sort(
-            { timestamp: 1 },
+            { timestamp: -1 },
         ).skip(skip).limit(limit).lean();
 
         // modify return data
+        let epoch = new Date(0);
         outings.forEach( (outing) => {
             outing.attendees = outing.attendees.length;
             outing.interested = outing.interested.length;
             outing.comments = outing.comments.length;
+            if (outing.start.getTime() == epoch.getTime()) { outing.start = null; }
+            if (outing.end.getTime() == epoch.getTime()) { outing.end = null; }
+            if (outing.location === "") { outing.location = null; }
         });
 
 
@@ -730,6 +810,7 @@ exports.createCommunity = createCommunity;
 exports.getCommunity = getCommunity;
 exports.editCommunity = editCommunity;
 exports.deleteCommunity = deleteCommunity;
+exports.getPosts = getPosts;
 exports.getMembers = getMembers;
 exports.inviteUser = inviteUser;
 exports.acceptInvite = acceptInvite;

@@ -71,7 +71,12 @@ const getOuting = async (req, res) => {
         const outingID = req.params.outingID;
 
         // get outing
-        const outing = await Outing.findById(outingID).lean();
+        const outing = await Outing.findById(
+            outingID,
+            'start end location canRSVP visibleRSVP attendees interested comments polls timestamp title community'
+        ).populate(
+            'community', 'name members'
+        ).lean();
 
         // check if outing exists
         if (!outing) {
@@ -82,24 +87,26 @@ const getOuting = async (req, res) => {
         }
 
         // check if user has access to outing
-        const user = await User.findById(currentUserID, 'communities').lean();
-        if (!user) {
-            return res.status(500).json({
-                success: false,
-                msg: `Error: Server Error: failed to get current user info`
-            });
-        }
-
-        if (!includesID(outing.community, user.communities)) {
+        if (!includesID(currentUserID, outing.community.members)) {
             return res.status(409).json({
                 sucess: false,
-                msg: `Error ${currentUser} does not have access to ${outingID}`
+                msg: `Error ${currentUsername} does not have access to outings from community '${outing.community.name}'`
             });
         }
 
+        // modify return data
+        delete outing.community.members;
+        outing.attendees = outing.attendees.length;
+        outing.interested = outing.interested.length;
+        outing.comments = outing.comments.length;
+        if (outing.location === "") { outing.location = null; }
+        let epoch = new Date(0);
+        if (outing.start.getTime() == epoch.getTime()) { outing.start = null; }
+        if (outing.end.getTime() == epoch.getTime()) { outing.end = null; }
         // TODO
         // get poll options
         // get vote count for each option
+
 
         return res.status(200).json({
             sucess: true,
@@ -128,7 +135,6 @@ const editOuting = async (req, res) => {
 
         // check outing exists
         const outing = await Outing.findById(outingID, 'owner title location start end');
-        console.log(outing);
         if (!outing) {
             return res.status(400).json({
                 success: false,

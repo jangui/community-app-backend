@@ -58,6 +58,9 @@ const getUser = async (req, res) => {
         delete desiredUser.friends;
         delete desiredUser.posts;
 
+        // check if profile picture set
+        if (!desiredUser.profilePicture) { desiredUser.profilePicture = null; }
+
         // return success
         return res.status(200).json({
             success: true,
@@ -206,6 +209,55 @@ const deleteUser = async (req, res) => {
     }
 }
 
+// get a user's communities
+const getCommunities = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const desiredUsername = req.body.username;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        let sameUser = false;
+        if (currentUser === desiredUsername) { sameUser = true }
+
+        // check other user exits
+        const desiredUser = await User.findOne(
+            {username: desiredUsername},
+            'communities friends')
+        .lean().populate('communities', 'name open');
+        if (!(desiredUser)) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${desiredUsername} does not exist`,
+            });
+        }
+
+        // check if we are friends with desired user
+        if (!(sameUser) && !(includesID(currentUserID, desiredUser.friends))) {
+            return res.status(401).json({
+                success: false,
+                msg: `Error: ${currentUser} cannot get ${desiredUsername}'s communities`,
+            });
+        }
+
+        // slice communities according to skip and limit params
+        const communities = desiredUser.communities.slice(skip, skip+limit);
+
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got communities ${skip}-${limit+skip-1} for ${desiredUsername}`,
+            communities: communities,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error:  ${err}`,
+        });
+    }
+}
+
 // get a users friends
 const getFriends = async (req, res) => {
     try {
@@ -280,7 +332,6 @@ const getFriends = async (req, res) => {
         });
 
         // remove current user from friends' list
-        console.log(currentUserInd);
         if (currentUserInd != -1) { friends.splice(currentUserInd, 1); }
 
         return res.status(200).json({
@@ -623,21 +674,39 @@ const getFeed = async (req, res) => {
         const limit = parseInt(req.body.limit);
 
         // get friends
-        const user = await User.findById(currentUserID, 'friends');
+        const user = await User.findById(currentUserID, 'friends communities');
         const friends = user.friends;
 
         // get posts from our friends
-        // TODO this is super inneficient, use activity table instead
-        let feed = await Post.find({owner: {$in: friends}}).sort('timestamp').skip(skip).limit(limit).lean();
+        let feed = await Post.find({
+                $or: [
+                    { owner: {$in: friends} },
+                    { $and: [
+                        { communityPost: true },
+                        { community: {$in: user.communities }},
+                        { owner: {$ne: currentUserID}}
+                    ]}
+                ]
+            }).populate(
+                'postFile', 'fileType'
+            ).populate(
+                'community', 'name'
+            ).populate(
+                'owner', 'username'
+            ).sort(
+                { timestamp: -1 }
+            ).skip(skip).limit(limit).lean();
 
+        // modify return data
         for (let i = 0; i < feed.length; ++i) {
-            // calculate comment total
+            feed[i].owner = feed[i].owner.username;
             feed[i].commentCount = feed[i].comments.length;
-            // calculate likes total
             feed[i].likesCount = feed[i].likes.length;
-            // only send over first 3 comments and likes
             delete feed[i].comments;
             delete feed[i].likes;
+            delete feed[i].__v;
+            if (feed[i].comunityPost) { feed[i].community = feed[i].community.name; } else { feed[i].community = null; }
+            if (feed[i].postType == '0') { feed[i].postFile = null; }
         }
 
         return res.status(200).json({
@@ -654,58 +723,11 @@ const getFeed = async (req, res) => {
     }
 }
 
-// get a user's communities
-const getCommunities = async (req, res) => {
-    try {
-        const currentUser = res.locals.username;
-        const currentUserID = res.locals.userID;
-        const desiredUsername = req.body.username;
-        const skip = parseInt(req.body.skip);
-        const limit = parseInt(req.body.limit);
-
-        let sameUser = false;
-        if (currentUser === desiredUsername) { sameUser = true }
-
-        // check other user exits
-        const desiredUser = await User.findOne(
-            {username: desiredUsername},
-            'communities friends')
-        .lean().populate('communities', 'name open');
-        if (!(desiredUser)) {
-            return res.status(400).json({
-                success: false,
-                msg: `Error: ${desiredUsername} does not exist`,
-            });
-        }
-
-        // check if we are friends with desired user
-        if (!(sameUser) && !(includesID(currentUserID, desiredUser.friends))) {
-            return res.status(401).json({
-                success: false,
-                msg: `Error: ${currentUser} cannot get ${desiredUsername}'s communities`,
-            });
-        }
-
-        // slice communities according to skip and limit params
-        const communities = desiredUser.communities.slice(skip, skip+limit);
-
-        return res.status(200).json({
-            success: true,
-            msg: `successfully got communities ${skip}-${limit+skip-1} for ${desiredUsername}`,
-            communities: communities,
-        });
-
-    } catch(err) {
-        return res.status(500).json({
-            success: false,
-            msg: `Error:  ${err}`,
-        });
-    }
-}
 
 exports.getUser = getUser;
 exports.editUser = editUser;
 exports.deleteUser = deleteUser;
+exports.getCommunities = getCommunities;
 exports.getFriends = getFriends;
 exports.sendFriendRequest = sendFriendRequest;
 exports.getFriendRequests = getFriendRequests;
@@ -714,4 +736,3 @@ exports.rejectFriendRequest = rejectFriendRequest;
 exports.cancelFriendRequest = cancelFriendRequest;
 exports.removeFriend = removeFriend;
 exports.getFeed = getFeed;
-exports.getCommunities = getCommunities;

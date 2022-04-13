@@ -24,6 +24,12 @@ const postSchema = new Schema({
     // the post's picture / video (if applicable)
     postFile: {type: mongoose.Schema.Types.ObjectId, ref: 'StaticFile'},
 
+    // is the post a community post
+    communityPost:  { type: Boolean, default: false },
+
+    // (if a community post) which community does the post belong to
+    community: {type: mongoose.Schema.Types.ObjectId, ref: 'Community', index: true},
+
     // post timestamp
     timestamp: {type: Date, default: Date.now(), index: true, required: true },
 

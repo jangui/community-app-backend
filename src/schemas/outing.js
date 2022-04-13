@@ -14,8 +14,8 @@ const outingSchema = new Schema({
 
     // start and end time of outing
     // default is EPOCH as a placeholder for no time set
-    start: {type: Date, default: new Date(1970, 0, 1, 0, 0, 0, 0)},
-    end: {type: Date, default: new Date(1970, 0, 1, 0, 0, 0, 0)},
+    start: {type: Date, default: new Date(0)},
+    end: {type: Date, default: new Date(0)},
 
     // location of outing
     location: {type: String, trim: true, default: ""},

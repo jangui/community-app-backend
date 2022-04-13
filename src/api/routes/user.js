@@ -4,6 +4,7 @@ const {
     getUser,
     editUser,
     deleteUser,
+    getCommunities,
     getFriends,
     sendFriendRequest,
     getFriendRequests,
@@ -12,7 +13,6 @@ const {
     cancelFriendRequest,
     removeFriend,
     getFeed,
-    getCommunities
 } = require('../controllers/userController');
 
 const router = express.Router();
@@ -25,6 +25,9 @@ router.route('/edit/').post(editUser);
 
 // delete current user
 router.route('/').delete(deleteUser);
+
+// get a user's communities
+router.route('/communities').post(getCommunities);
 
 // get a users friends
 router.route('/friends/').post(getFriends);
@@ -50,8 +53,6 @@ router.route('/remove/friend/').post(removeFriend);
 // get current user's feed
 router.route('/feed').post(getFeed);
 
-// get a user's communities
-router.route('/communities').post(getCommunities);
 
 module.exports = router;
 

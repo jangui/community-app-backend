@@ -1,4 +1,4 @@
-const { User, Post, PostComment, PostLike } = require('../db.js');
+const { User, Community, Post, PostComment, PostLike } = require('../db.js');
 const { uploadFile } = require('../utils/upload.js');
 const { includesID } = require('../utils/includesID.js');
 
@@ -10,6 +10,7 @@ const createPost = async (req, res) => {
         const postType = req.body.postType;
         const postText = req.body.postText;
         const postLocation = req.body.postLocation;
+        const community = req.body.community;
 
         // get static file
         let staticFile;
@@ -24,10 +25,39 @@ const createPost = async (req, res) => {
         });
 
         // upload image
-        let staticFileData;
-        if (postType === '1' && staticFile) {
+        let staticFileData = null;
+        if (postType === '1') {
+            if (!staticFile) {
+                return res.status(400).json({
+                    success: false,
+                    msg: `Error: postType 1 requires a file upload`,
+                });
+            }
             staticFileData = await uploadFile(staticFile, currentUserID, true, false, null, req, res);
             post.postFile = staticFileData._id;
+        }
+
+        // community post logic
+        post.communityPost = false;
+        post.community = null;
+        if (community) {
+            // get community ID
+            const communityDoc = await Community.findOne({name: community}, 'id members').lean();
+            if (!communityDoc) {
+                return res.status(403).json({
+                    success: false,
+                    msg: `Error: community '${community}' does not exist`,
+                });
+            }
+            // check user can post in the community
+            if (!includesID(currentUserID, communityDoc.members)) {
+                return res.status(403).json({
+                    success: false,
+                    msg: `Error: ${currentUser} cannot post in community ${community}`,
+                });
+            }
+            post.communityPost = true;
+            post.community = communityDoc._id;
         }
 
         // add location if provided
@@ -50,6 +80,8 @@ const createPost = async (req, res) => {
                 postLocation: postLocation,
                 postText: postText,
                 postFile: staticFileData,
+                community: post.community,
+                communityPost: post.communityPost,
             },
         });
 
@@ -70,10 +102,13 @@ const getPost = async (req, res) => {
 
         // check post exists
         const post = await Post
-            .findById(postID, 'owner postLocation postText postFile')
-            .lean()
+            .findById(
+                postID,
+                'owner likes comments postLocation postType postText postFile community communityPost timestamp'
+            ).lean()
             .populate('postFile', 'fileType')
-            .populate('owner', 'friends');
+            .populate('owner', 'friends username')
+            .populate('community', 'name');
 
         if (!post) {
             return res.status(400).json({
@@ -81,17 +116,36 @@ const getPost = async (req, res) => {
                 msg: `Error: Post w/ id '${postID}' does not exist`,
             });
         }
+        const userOwnsPost = post.owner.username === currentUser;
+        let hasAccess = false;
 
-        // check current user is friends w/ post owner or is owner of post
-        if (!(currentUserID == post.owner._id) && (!includesID(currentUserID, post.owner.friends))) {
+        // check if authorized to see post
+        if (post.commnityPost) {
+            // get user's communities
+            const user = await User.findById(currentUserID, 'communities').lean();
+            // check user is in the community of the post
+            if (includesID(post.community, user.communities)) { hasAcess = true; }
+
+
+        } else {
+            console.log(post.owner.friends, currentUserID);
+            // if not a community post check if user is friends with post owner
+            if (includesID(currentUserID, post.owner.friends)) { hasAccess = true; }
+        }
+
+        if (!userOwnsPost && !hasAccess) {
             return res.status(403).json({
                 success: false,
-                msg: `Error: Unauthorized. ${currentUser} cannot like ${post.owner.username}'s post`,
+                msg: `Error: Unauthorized. ${currentUser} cannot get ${post.owner.username}'s post`,
             });
         }
 
-        // unpopulate owner field from post
-        post.owner = post.owner._id
+        // modify return data
+        post.likes = post.likes.length;
+        post.comments = post.comments.length;
+        post.owner = post.owner.username;
+        if (post.postType === 0) { post.postFile = null; }
+        if (post.communityPost) { post.community = post.community.name; } else { post.community = null; }
 
         return res.status(200).json({
             success: true,
@@ -132,12 +186,14 @@ const getPosts = async (req, res) => {
             });
         }
 
-        // get desired user's posts
+        // get desired user's posts (excluding community posts)
         const posts = await Post.find(
-            { owner: desiredUser._id },
+            { owner: desiredUser._id, communityPost: false },
             'postText postLocation postType postFile comments likes',
         ).populate(
             'postFile', 'fileType'
+        ).populate(
+            'owner', 'username'
         ).sort(
             { timestamp: 1 },
         ).skip(skip).limit(limit).lean();
@@ -146,6 +202,8 @@ const getPosts = async (req, res) => {
         posts.forEach( (post) => {
             post.likes = post.likes.length;
             post.comments = post.comments.length;
+            post.owner = post.owner.username;
+            if (post.postType === 0) { post.postFile = null; }
         });
 
 
@@ -240,9 +298,7 @@ const deletePost = async (req, res) => {
         // delete post
         await Post.findByIdAndDelete(postID);
 
-        // TODO
-        // delete all likes and comments
-        // remove static files
+        // TODO // delete all likes and comments // remove static files
 
         return res.status(200).json({
             success: true,
@@ -274,8 +330,22 @@ const makeComment = async (req, res) => {
             })
         }
 
-        // check post owner and current user are friends
-        if (post.owner.username != currentUser && (!includesID(currentUserID, post.owner.friends))) {
+        const userOwnsPost = post.owner.username === currentUser;
+        let hasAccess = false;
+
+        // check if authorized to see post
+        if (post.commnityPost) {
+            // get user's communities
+            const user = await User.findById(currentUserID, 'communities').lean();
+            // check user is in the community of the post
+            if (includesID(post.community, user.communities)) { hasAcess = true; }
+
+        } else {
+            // if not a community post check if user is friends with post owner
+            if (includesID(currentUserID, post.owner.friends)) { hasAccess = true; }
+        }
+
+        if (!userOwnsPost && !hasAccess) {
             return res.status(403).json({
                 success: false,
                 msg: `Error: Unauthorized. ${currentUser} cannot comment on ${post.owner.username}'s posts`,
@@ -321,7 +391,7 @@ const getComments = async (req, res) => {
         const limit = parseInt(req.body.limit);
 
         // check post exists
-        const post = await Post.findById(postID, 'owner comments').lean().populate('owner', 'username friends');
+        const post = await Post.findById(postID, 'owner comments communityPost community').lean().populate('owner', 'username friends');
         if (!post) {
             return res.status(400).json({
                 success: false,
@@ -329,11 +399,25 @@ const getComments = async (req, res) => {
             });
         }
 
-        // check we own post or are friends w/ owner of post
-        if (!(post.owner._id == currentUserID) && !(includesID(currentUserID, post.owner.friends))) {
+        const userOwnsPost = post.owner.username === currentUser;
+        let hasAccess = false;
+
+        // check if authorized to see post
+        if (post.commnityPost) {
+            // get user's communities
+            const user = await User.findById(currentUserID, 'communities').lean();
+            // check user is in the community of the post
+            if (includesID(post.community, user.communities)) { hasAcess = true; }
+
+        } else {
+            // if not a community post check if user is friends with post owner
+            if (includesID(currentUserID, post.owner.friends)) { hasAccess = true; }
+        }
+
+        if (!userOwnsPost && !hasAccess) {
             return res.status(403).json({
                 success: false,
-                msg: `Error ${currentUser} cannot get comments for ${post.owner.username}'s post`
+                msg: `Error: Unauthorized. ${currentUser} cannot get comments for ${post.owner.username}'s post`,
             });
         }
 
@@ -458,7 +542,7 @@ const getLikes = async (req, res) => {
         const limit = parseInt(req.body.limit);
 
         // check post exists
-        const post = await Post.findById(postID, 'owner').lean().populate('owner', 'username friends');
+        const post = await Post.findById(postID, 'owner').lean().populate('owner', 'username friends community communityPost');
         if (!post) {
             return res.status(400).json({
                 success: false,
@@ -466,16 +550,26 @@ const getLikes = async (req, res) => {
             });
         }
 
-        // check if we are post owner
-        let postOwner = false;
-        if (post.owner._id == currentUserID) { postOwner = true; }
+        // check if current user owns the post being liked
+        const userOwnsPost = post.owner.username === currentUser;
+        let hasAccess = false;
 
-        // check if we have permissions to get likes
-        // check if friends w/ owner of post
-        if (!postOwner && !(includesID(currentUserID, post.owner.friends))) {
+        // check if authorized to see post
+        if (post.commnityPost) {
+            // get user's communities
+            const user = await User.findById(currentUserID, 'communities').lean();
+            // check user is in the community of the post
+            if (includesID(post.community, user.communities)) { hasAcess = true; }
+
+        } else {
+            // if not a community post check if user is friends with post owner
+            if (includesID(currentUserID, post.owner.friends)) { hasAccess = true; }
+        }
+
+        if (!userOwnsPost && !hasAccess) {
             return res.status(403).json({
                 success: false,
-                msg: `Error ${currentUser} cannot get likes for ${post.owner.username}'s post`
+                msg: `Error: Unauthorized. ${currentUser} cannot get likes for ${post.owner.username}'s post`,
             });
         }
 
@@ -502,7 +596,7 @@ const getLikes = async (req, res) => {
             currentLike.profilePicture = currentLike.owner.profilePicture;
 
             // if current user owns the post, then they are friends with every user who liked the post
-            if (postOwner) {
+            if (userOwnsPost) {
                 currentLike.areFriends = true;
                 delete currentLike.owner; // dont return current like's owner's info
                 return;
@@ -543,7 +637,7 @@ const likePost = async (req, res) => {
 
         // check post exists
         const post = await Post
-                .findById(postID, 'owner likes')
+                .findById(postID, 'owner likes community communityPost')
                 .lean()
                 .populate('likes', 'owner')
                 .populate('owner', 'friends username');
@@ -554,8 +648,23 @@ const likePost = async (req, res) => {
             });
         }
 
-        // check current user is friends w/ post owner or is owner of post
-        if (!(currentUserID == post.owner._id) && (!includesID(currentUserID, post.owner.friends))) {
+        // check if current user owns the post being liked
+        const userOwnsPost = post.owner.username === currentUser;
+        let hasAccess = false;
+
+        // check if authorized to see post
+        if (post.commnityPost) {
+            // get user's communities
+            const user = await User.findById(currentUserID, 'communities').lean();
+            // check user is in the community of the post
+            if (includesID(post.community, user.communities)) { hasAcess = true; }
+
+        } else {
+            // if not a community post check if user is friends with post owner
+            if (includesID(currentUserID, post.owner.friends)) { hasAccess = true; }
+        }
+
+        if (!userOwnsPost && !hasAccess) {
             return res.status(403).json({
                 success: false,
                 msg: `Error: Unauthorized. ${currentUser} cannot like ${post.owner.username}'s post`,
@@ -607,7 +716,7 @@ const unlikePost = async (req, res) => {
 
         // check post exists
         const post = await Post
-                .findById(postID, 'owner likes')
+                .findById(postID, 'owner likes community communityPost')
                 .lean()
                 .populate('likes', 'owner')
                 .populate('owner', 'friends username');
@@ -618,8 +727,23 @@ const unlikePost = async (req, res) => {
             });
         }
 
-        // check current user is friends w/ post owner or is owner of post
-        if (!(currentUserID == post.owner._id) && (!includesID(currentUserID, post.owner.friends))) {
+        // check if current user owns the post being liked
+        const userOwnsPost = post.owner.username === currentUser;
+        let hasAccess = false;
+
+        // check if authorized to see post
+        if (post.commnityPost) {
+            // get user's communities
+            const user = await User.findById(currentUserID, 'communities').lean();
+            // check user is in the community of the post
+            if (includesID(post.community, user.communities)) { hasAcess = true; }
+
+        } else {
+            // if not a community post check if user is friends with post owner
+            if (includesID(currentUserID, post.owner.friends)) { hasAccess = true; }
+        }
+
+        if (!userOwnsPost && !hasAccess) {
             return res.status(403).json({
                 success: false,
                 msg: `Error: Unauthorized. ${currentUser} cannot unlike ${post.owner.username}'s post`,

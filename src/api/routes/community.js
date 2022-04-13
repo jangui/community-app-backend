@@ -5,6 +5,7 @@ const {
     getCommunity,
     editCommunity,
     deleteCommunity,
+    getPosts,
     getMembers,
     inviteUser,
     acceptInvite,
@@ -28,6 +29,9 @@ router.route('/edit/').post(editCommunity);
 
 // delete a community
 router.route('/:community').delete(deleteCommunity);
+
+// get community posts
+router.route('/posts').post(getPosts);
 
 // get community members
 router.route('/members').post(getMembers);
