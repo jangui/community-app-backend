@@ -105,10 +105,17 @@ const getPost = async (req, res) => {
             .findById(
                 postID,
                 'owner likes comments postLocation postType postText postFile community communityPost timestamp'
-            ).lean()
-            .populate('postFile', 'fileType')
-            .populate('owner', 'friends username')
-            .populate('community', 'name');
+            ).lean(
+            ).populate(
+                'postFile', 'fileType'
+            ).populate({
+                path: 'owner',
+                select: 'friends username profilePicture',
+                populate: {
+                    path: 'profilePicture',
+                    select: 'fileType',
+                }
+            }).populate('community', 'name');
 
         if (!post) {
             return res.status(400).json({
@@ -143,7 +150,7 @@ const getPost = async (req, res) => {
         // modify return data
         post.likes = post.likes.length;
         post.comments = post.comments.length;
-        post.owner = post.owner.username;
+        delete post.owner.friends;
         if (post.postType === 0) { post.postFile = null; }
         if (post.communityPost) { post.community = post.community.name; } else { post.community = null; }
 
@@ -192,9 +199,14 @@ const getPosts = async (req, res) => {
             'postText postLocation postType postFile comments likes',
         ).populate(
             'postFile', 'fileType'
-        ).populate(
-            'owner', 'username'
-        ).sort(
+        ).populate({
+            path: 'owner',
+            select: 'friends username profilePicture',
+            populate: {
+                path: 'profilePicture',
+                select: 'fileType',
+            }
+        }).sort(
             { timestamp: 1 },
         ).skip(skip).limit(limit).lean();
 
@@ -202,7 +214,7 @@ const getPosts = async (req, res) => {
         posts.forEach( (post) => {
             post.likes = post.likes.length;
             post.comments = post.comments.length;
-            post.owner = post.owner.username;
+            delete post.owner.friends;
             if (post.postType === 0) { post.postFile = null; }
         });
 

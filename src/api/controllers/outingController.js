@@ -76,7 +76,14 @@ const getOuting = async (req, res) => {
             'start end location canRSVP visibleRSVP attendees interested comments polls timestamp title community'
         ).populate(
             'community', 'name members'
-        ).lean();
+        ).populate({
+            path: 'owner',
+            select: 'username profilePicture',
+            populate: {
+                path: 'profilePicture',
+                select: 'fileType',
+            }
+        }).lean();
 
         // check if outing exists
         if (!outing) {

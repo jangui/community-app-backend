@@ -732,7 +732,14 @@ const getOutings = async (req, res) => {
         const outings = await Outing.find(
             { community: community._id },
             'owner title canRSVP visibleRSVP location start end attendees interested comments polls timestamp',
-        ).sort(
+        ).populate({
+            path: 'owner',
+            select: 'username profilePicture',
+            populate: {
+                path: 'profilePicture',
+                select: 'fileType',
+            }
+        }).sort(
             { timestamp: -1 },
         ).skip(skip).limit(limit).lean();
 
