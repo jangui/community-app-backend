@@ -426,6 +426,16 @@ const inviteUser = async (req, res) => {
             { $push: { communityRequests: community._id }}
         );
 
+        // create notification
+        const notification = new Notification({
+            notifee: invitedUser._id,
+            notifier: currentUserID,
+            referenceType: 1, // reference to community
+            referenceID: community._id,
+            notificationType: 2
+        });
+        await notification.save();
+
         return res.status(200).json({
             success: true,
             msg: `Succesfully sent ${invitedUsername} a request to join ${communityName}`,
@@ -456,7 +466,7 @@ const acceptInvite = async (req, res) => {
         }
 
         // check community exists
-        const community = await Community.findOne({name: communityName}, '_id').lean();
+        const community = await Community.findOne({name: communityName}, 'owner').lean();
         if (!community) {
             return res.status(409).json({
                 success: false,
@@ -483,6 +493,16 @@ const acceptInvite = async (req, res) => {
             { $push: { members: currentUserID }}
         );
 
+        // create notification
+        const notification = new Notification({
+            notifee: community.owner,
+            notifier: currentUserID,
+            referenceType: 1, // reference to community
+            referenceID: community._id,
+            notificationType: 3
+        });
+        await notification.save();
+
         // return success
         return res.status(200).json({
             success: true,
@@ -506,7 +526,7 @@ const joinCommunity = async (req, res) => {
         const communityName = req.body.communityName;
 
         // check community exists
-        const community = await Community.findOne({name: communityName}, 'members open memberRequests').lean();
+        const community = await Community.findOne({name: communityName}, 'owner members open memberRequests').lean();
         if (!community) {
             return res.status(409).json({
                 success: false,
@@ -536,6 +556,16 @@ const joinCommunity = async (req, res) => {
             await Community.findByIdAndUpdate(community._id,
                 { $push: { memberRequests: currentUserID }}
             );
+
+            // create notification
+            const notification = new Notification({
+                notifee: community.owner,
+                notifier: currentUserID,
+                referenceType: 1, // reference to community
+                referenceID: community._id,
+                notificationType: 0
+            });
+            await notification.save();
 
             return res.status(200).json({
                 success: true,
@@ -627,6 +657,16 @@ const acceptUser = async (req, res) => {
         await User.findOneAndUpdate({username: invitedUsername}, {
             $push: { communities: community._id },
         });
+
+        // create notification
+        const notification = new Notification({
+            notifee: invitedUser._id
+            notifier: currentUserID,
+            referenceType: 1, // reference to community
+            referenceID: community._id,
+            notificationType: 1
+        });
+        await notification.save();
 
         // return success
         return res.status(200).json({

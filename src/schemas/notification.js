@@ -4,16 +4,13 @@ const Schema = mongoose.Schema;
 
 const notificationSchema = new Schema({
     // user getting notified
-    notifier: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
+    notifee: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true},
 
     // user causing notification
-    notifee: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true},
+    notifier: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
 
     // has the notification be read
     unread: { type: Boolean, default: true },
-
-    // notification message
-    message: { type: String, required: true },
 
     // notification preview image
     image: {type: mongoose.Schema.Types.ObjectId, ref: 'StaticFile'},
@@ -28,24 +25,26 @@ const notificationSchema = new Schema({
     // ID of what the notifcation refers to
     referenceID: {type: mongoose.Schema.Types.ObjectId},
 
-    // whether you can take action on this notification ( accept / reject invite or request of some sort)
-    action: {type: Boolean, default: false },
-
-    // type of action
-    // ** dependent on reference type **
-    // referenceType 0:
-    //  actionType 0: friend request
+    // type of notification
+    // referenceType 0: (User)
+    //  notificationType 0: notifer sent notifee a friend request
+    //  notificationType 1: notifer accepted notifee's friend request
     //
-    // referenceType 1:
-    //  actionType 0: invite to community
-    //  actionType 1: request to join community
+    // referenceType 1: (Community)
+    //  notificationType 0: notifier requests to join notifee's community
+    //  notificationType 1: notifee is accepted into the referenced community
+    //  notificationType 2: notifee is invited to the referenced community
+    //  notificationType 3: notifer is accepted invite to the referenced community
     //
-    // referenceType 2:
-    //  no actions for this reference
+    // referenceType 2: (Post)
+    //  notificationType 0: notifier commented on notifee's post
+    //  notificationType 1: notifier liked notifee's post
     //
-    // referenceType 3:
-    //  no actions for this reference
-    actionType: {type: Number, min: 0, default: 0},
+    // referenceType 3: (Outing)
+    //  notificationType 0: notifier commented on notifee's outing
+    //  notificationType 1: notifier is attending notifee's outing
+    //
+    notificationType: {type: Number, min: 0, default: 0},
 
     // notification time stamp
     timestamp: {type: Date, default: Date.now(), index: true, required: true },

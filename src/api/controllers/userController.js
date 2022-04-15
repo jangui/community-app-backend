@@ -84,13 +84,15 @@ const getNotifications = async (req, res) => {
         const limit = parseInt(req.body.limit);
 
         const notifications = await Notification.find(
-            { notifer: currentUserID }
+            { notifee: currentUserID }
+        ).select(
+            '-__v'
         ).sort(
             { timestamp: -1 }
         ).populate(
             'image', 'fileType'
         ).populate({
-            path: 'notifee',
+            path: 'notifier',
             select: 'username profilePicture',
             populate: {
                 path: 'profilePicture',
@@ -438,6 +440,17 @@ const sendFriendRequest = async (req, res) => {
         await User.findByIdAndUpdate(desiredUser._id,
             { $push: { friendRequests: currentUserID }}
         );
+
+        // create notification to user
+        const notification = new Notification({
+            notifee: desiredUser._id,
+            notifier: currentUserID,
+            referenceType: 0, // reference to a user
+            referenceID: currentUserID,
+            notificationType: 0
+        });
+        await notification.save();
+
         return res.status(200).json({
             success: true,
             msg: `Successfully sent ${desiredUsername} a friend request`,
@@ -535,6 +548,16 @@ const acceptFriendRequest = async (req, res) => {
         await User.findByIdAndUpdate(desiredUser._id,
             { $push: { friends: currentUserID }}
         );
+
+        // create notification
+        const notification = new Notification({
+            notifee: currentUserID,
+            notifier: desiredUser._id,
+            referenceType: 0, // reference to a user
+            referenceID: desiredUserID,
+            notificationType: 0
+        });
+        await notification.save();
 
         return res.status(200).json({
             success: true,

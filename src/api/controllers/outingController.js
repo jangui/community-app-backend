@@ -266,16 +266,20 @@ const makeOutingComment = async (req, res) => {
             { $push: { comments: outingCommentID }}
         );
 
-        return res.status(200).json({
-            success: true,
-            msg: `Success! ${currentUser} commented on outing ${outingID}`,
-            comment: outingCommentDoc,
+        // create notification
+        const notification = new Notification({
+            notifee: outing.owner,
+            notifier: currentUserID,
+            referenceType: 3, // reference to a outing
+            referenceID: postID,
+            notificationType: 0
         });
+        await notification.save();
 
         return res.status(200).json({
             success: true,
             msg: `Success! ${currentUser} commented on outing ${outingID}`,
-            comment: {_id: outingCommentDoc._id},
+            comment: outingCommentDoc,
         });
 
     } catch(err) {
@@ -508,7 +512,7 @@ const attendOuting = async (req, res) => {
 
         // check outing exists
         const outing = await Outing
-                .findById(outingID, 'community attendees')
+                .findById(outingID, 'community attendees owner')
                 .lean()
                 .populate('attendees', 'attendee')
                 .populate('community', 'members');
@@ -548,6 +552,16 @@ const attendOuting = async (req, res) => {
         await Outing.findByIdAndUpdate(outingID,
             { $push: { attendees: attendeeDoc._id }}
         );
+
+        // create notification
+        const notification = new Notification({
+            notifee: currentUserID,
+            notifier: outing.owner,
+            referenceType: 3, // reference to a outing
+            referenceID: postID,
+            notificationType: 1
+        });
+        await notification.save();
 
         return res.status(200).json({
             success: true,

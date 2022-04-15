@@ -379,6 +379,16 @@ const makeComment = async (req, res) => {
             { $push: { comments: postCommentID }}
         );
 
+        // create notification
+        const notification = new Notification({
+            notifee: currentUserID,
+            notifier: post.owner,
+            referenceType: 2, // reference to a post
+            referenceID: postID,
+            notificationType: 0
+        });
+        await notification.save();
+
         return res.status(200).json({
             success: true,
             msg: `Success! ${currentUser} commented on post ${postID}`,
@@ -705,6 +715,16 @@ const likePost = async (req, res) => {
         await Post.findByIdAndUpdate(postID,
             { $push: { likes: likeDoc._id }}
         );
+
+        // create notification
+        const notification = new Notification({
+            notifee: currentUserID,
+            notifier: post.owner,
+            referenceType: 2, // reference to a post
+            referenceID: postID,
+            notificationType: 1
+        });
+        await notification.save();
 
         return res.status(200).json({
             success: true,
