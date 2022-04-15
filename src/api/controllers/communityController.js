@@ -278,10 +278,14 @@ const getPosts = async (req, res) => {
             ).skip(skip).limit(limit).populate(
                 'postFile',
                 'fileType'
-            ).populate(
-                'owner',
-                'username',
-            ).sort(
+            ).populate({
+                path: 'owner',
+                select: 'username profilePicture',
+                populate: {
+                    path: 'profilePicture',
+                    select: 'fileType',
+                }
+            }).sort(
                 { timestamp: -1 }
             ).lean();
 
@@ -289,7 +293,6 @@ const getPosts = async (req, res) => {
         posts.forEach( (post) => {
             post.likes = post.likes.length;
             post.comments = post.comments.length;
-            post.owner = post.owner.username;
             if (post.postLocation === "") { post.postLocation = null; }
             if (post.postType === 0) { post.postFile = null; }
         });

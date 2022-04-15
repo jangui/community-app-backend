@@ -2,6 +2,7 @@ const express = require('express');
 
 const {
     getUser,
+    getNotifications,
     editUser,
     deleteUser,
     getCommunities,
@@ -19,6 +20,9 @@ const router = express.Router();
 
 // get a user's info
 router.route('/:username').get(getUser);
+
+// get current user's notifications
+router.route('/notifications').post(getNotifications);
 
 // edit current user's info
 router.route('/edit/').post(editUser);

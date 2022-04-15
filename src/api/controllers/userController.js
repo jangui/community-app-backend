@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 
-const { User, Post } = require('../db.js');
+const { User, Post, Notification } = require('../db.js');
 const { uploadFile } = require('../utils/upload.js');
 const { genAccessToken } = require('../utils/auth.js');
 const { includesID } = require('../utils/includesID.js');
@@ -72,6 +72,43 @@ const getUser = async (req, res) => {
         return res.status(500).json({
             success: false,
             msg: `Error:  ${err}`,
+        });
+    }
+}
+
+const getNotifications = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        const notifications = await Notification.find(
+            { notifer: currentUserID }
+        ).sort(
+            { timestamp: -1 }
+        ).populate(
+            'image', 'fileType'
+        ).populate({
+            path: 'notifee',
+            select: 'username profilePicture',
+            populate: {
+                path: 'profilePicture',
+                select: 'fileType',
+            },
+        }).skip(skip).limit(limit).lean();
+
+        // return notifications
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got notifications ${skip}-${limit+skip-1} for user ${currentUser}`,
+            notifications: notifications,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
         });
     }
 }
@@ -725,6 +762,7 @@ const getFeed = async (req, res) => {
 
 
 exports.getUser = getUser;
+exports.getNotifications = getNotifications;
 exports.editUser = editUser;
 exports.deleteUser = deleteUser;
 exports.getCommunities = getCommunities;

@@ -16,6 +16,9 @@ const conn = mongoose.createConnection(uri, { useUnifiedTopology: true } );
 const staticFileSchema = require('./schemas/staticFile.js');
 const StaticFile = conn.model("StaticFile", staticFileSchema);
 
+const notificationSchema = require('./schemas/notification.js');
+const Notification = conn.model("Notification", notificationSchema);
+
 const userSchema = require('./schemas/user.js');
 const User = conn.model("User", userSchema);
 
@@ -42,9 +45,11 @@ const OutingAttendee = conn.model("OutingAttendee", outingAttendeeSchema);
 
 // exports
 exports.conn = conn;
+
 exports.StaticFile = StaticFile;
 
 exports.User = User;
+exports.Notification = Notification;
 
 exports.Post = Post;
 exports.PostComment = PostComment;
