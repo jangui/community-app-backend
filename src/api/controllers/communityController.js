@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const { User, Post, Community, Outing } = require('../db.js');
+const { User, Post, Notification, Community, Outing } = require('../db.js');
 const { uploadFile } = require('../utils/upload.js');
 const { includesID } = require('../utils/includesID.js');
 
@@ -73,7 +73,7 @@ const getCommunity = async (req, res) => {
         // get community
         const community = await Community.findOne(
             {name: communityName},
-            'name description communityImage open hidden members'
+            'name owners description communityImage open hidden members'
         ).lean().populate('communityImage', 'fileType');
 
         // check if community exists
@@ -86,6 +86,11 @@ const getCommunity = async (req, res) => {
 
         // set members to member count
         community.members = community.members.length;
+
+        // check if we own community
+        community.isAdmin = false;
+        if (includesID(currentUserID, community.owners)) { community.isAdmin = true; }
+        delete community.owners;
 
         // return success
         return res.status(200).json({
@@ -276,8 +281,9 @@ const getPosts = async (req, res) => {
                 { community: community._id },
                 'owner comments likes postType postText start end postLocation postFile timestamp',
             ).skip(skip).limit(limit).populate(
-                'postFile',
-                'fileType'
+                'postFile', 'fileType'
+            ).populate(
+                'likes', 'owner'
             ).populate({
                 path: 'owner',
                 select: 'username profilePicture',
@@ -291,6 +297,14 @@ const getPosts = async (req, res) => {
 
         // modify return data
         posts.forEach( (post) => {
+            post.hasLiked = false;
+            for (let i = 0; i < post.likes.length; ++i) {
+                like = post.likes[i];
+                if (like.owner == currentUserID) {
+                    post.hasLiked = true;
+                    break;
+                }
+            }
             post.likes = post.likes.length;
             post.comments = post.comments.length;
             if (post.postLocation === "") { post.postLocation = null; }
@@ -660,7 +674,7 @@ const acceptUser = async (req, res) => {
 
         // create notification
         const notification = new Notification({
-            notifee: invitedUser._id
+            notifee: invitedUser._id,
             notifier: currentUserID,
             referenceType: 1, // reference to community
             referenceID: community._id,

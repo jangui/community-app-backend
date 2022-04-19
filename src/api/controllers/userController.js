@@ -726,6 +726,7 @@ const removeFriend = async (req, res) => {
 }
 
 // get current user's feed
+// TODO profile pic & HAS LIKED
 const getFeed = async (req, res) => {
     try {
         const currentUser = res.locals.username;
@@ -752,22 +753,38 @@ const getFeed = async (req, res) => {
             ).populate(
                 'community', 'name'
             ).populate(
-                'owner', 'username'
-            ).sort(
+                'likes', 'owner'
+            ).populate({
+                path: 'owner',
+                select: 'username profilePicture',
+                populate: {
+                    path: 'profilePicture',
+                    select: 'fileType',
+                },
+            }).sort(
                 { timestamp: -1 }
             ).skip(skip).limit(limit).lean();
 
         // modify return data
-        for (let i = 0; i < feed.length; ++i) {
-            feed[i].owner = feed[i].owner.username;
-            feed[i].commentCount = feed[i].comments.length;
-            feed[i].likesCount = feed[i].likes.length;
-            delete feed[i].comments;
-            delete feed[i].likes;
-            delete feed[i].__v;
-            if (feed[i].comunityPost) { feed[i].community = feed[i].community.name; } else { feed[i].community = null; }
-            if (feed[i].postType == '0') { feed[i].postFile = null; }
-        }
+        feed.forEach( (post) => {
+            // check if post already liked
+            post.hasLiked = false;
+            for (let i = 0; i < post.likes.length; ++i) {
+                like = post.likes[i];
+                if (like.owner == currentUserID) {
+                    post.hasLiked = true;
+                    break;
+                }
+            }
+            post.commentCount = post.comments.length;
+            post.likesCount = post.likes.length;
+            delete post.comments;
+            delete post.likes;
+            delete post.__v;
+            if (post.comunityPost) { post.community = post.community.name; } else { post.community = null; }
+            if (post.postType == '0') { post.postFile = null; }
+            if (!post.owner.profilePicture) { post.owner.profilePicture = null; }
+        });
 
         return res.status(200).json({
             success: true,

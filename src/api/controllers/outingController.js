@@ -1,4 +1,4 @@
-const { User, Community, Outing, OutingComment, OutingAttendee } = require('../db.js');
+const { User, Community, Notification, Outing, OutingComment, OutingAttendee } = require('../db.js');
 const { uploadFile } = require('../utils/upload.js');
 const { includesID } = require('../utils/includesID.js');
 

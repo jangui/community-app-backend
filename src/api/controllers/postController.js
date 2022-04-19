@@ -1,4 +1,4 @@
-const { User, Community, Post, PostComment, PostLike } = require('../db.js');
+const { User, Community, Notification, Post, PostComment, PostLike } = require('../db.js');
 const { uploadFile } = require('../utils/upload.js');
 const { includesID } = require('../utils/includesID.js');
 
@@ -108,6 +108,8 @@ const getPost = async (req, res) => {
             ).lean(
             ).populate(
                 'postFile', 'fileType'
+            ).populate(
+                'likes', 'owner'
             ).populate({
                 path: 'owner',
                 select: 'friends username profilePicture',
@@ -135,7 +137,6 @@ const getPost = async (req, res) => {
 
 
         } else {
-            console.log(post.owner.friends, currentUserID);
             // if not a community post check if user is friends with post owner
             if (includesID(currentUserID, post.owner.friends)) { hasAccess = true; }
         }
@@ -148,6 +149,14 @@ const getPost = async (req, res) => {
         }
 
         // modify return data
+        post.hasLiked = false;
+        for (let i = 0; i < post.likes.length; ++i) {
+            like = post.likes[i];
+            if (like.owner == currentUserID) {
+                post.hasLiked = true;
+                break;
+            }
+        }
         post.likes = post.likes.length;
         post.comments = post.comments.length;
         delete post.owner.friends;
@@ -199,6 +208,8 @@ const getPosts = async (req, res) => {
             'postText postLocation postType postFile comments likes',
         ).populate(
             'postFile', 'fileType'
+        ).populate(
+            'likes', 'owner'
         ).populate({
             path: 'owner',
             select: 'friends username profilePicture',
@@ -212,6 +223,14 @@ const getPosts = async (req, res) => {
 
         // modify return data
         posts.forEach( (post) => {
+            post.hasLiked = false;
+            for (let i = 0; i < post.likes.length; ++i) {
+                like = post.likes[i];
+                if (like.owner == currentUserID) {
+                    post.hasLiked = true;
+                    break;
+                }
+            }
             post.likes = post.likes.length;
             post.comments = post.comments.length;
             delete post.owner.friends;
