@@ -11,7 +11,6 @@ const createPost = async (req, res) => {
         const postText = req.body.postText;
         const postLocation = req.body.postLocation;
         const community = req.body.community;
-
         // get static file
         let staticFile;
         if (req.files) { staticFile = req.files.postFile; }
@@ -475,6 +474,13 @@ const getComments = async (req, res) => {
             populate: {
                 path: 'profilePicture',
                 select: 'fileType',
+            }
+        });
+
+        // return null if no profile pic
+        comments.forEach( (comment) => {
+            if (!comment.owner.profilePicture) {
+                comment.owner.profilePicture = null;
             }
         });
 

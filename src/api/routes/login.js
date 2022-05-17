@@ -38,7 +38,7 @@ router.route('/').post( async (req, res) => {
             return res.status(401).json({
                 success: true,
                 msg: 'Successful login',
-                user: '',
+                user: { 'username': username},
                 verifiedEmail: false,
                 email: user.email,
                 accessToken: '',

@@ -15,6 +15,10 @@ const createOuting = async (req, res) => {
         const canRSVP = req.body.canRSVP;
         const visibleRSVP = req.body.visibleRSVP;
 
+        // get static file
+        let staticFile;
+        if (req.files) { staticFile = req.files.outingFile; }
+
         // get community ID
         const community = await Community.findOne({name: communityName}, '_id members').lean();
         const communityID = community._id;
@@ -33,6 +37,14 @@ const createOuting = async (req, res) => {
             community: communityID,
             owner: currentUserID,
         });
+
+        // upload image
+        let staticFileData = null;
+        if (staticFile) {
+            staticFileData = await uploadFile(staticFile, currentUserID, false, true, communityID, req, res);
+            outing.outingFile = staticFileData._id;
+        }
+
 
         // add optional parameters
         if (startTime) { outing.start = Date.parse(startTime); }
@@ -83,7 +95,9 @@ const getOuting = async (req, res) => {
                 path: 'profilePicture',
                 select: 'fileType',
             }
-        }).lean();
+        }).populate(
+            'outingFile', 'fileType'
+        ).lean();
 
         // check if outing exists
         if (!outing) {
@@ -101,6 +115,10 @@ const getOuting = async (req, res) => {
             });
         }
 
+        // check if user is attending outing
+        outing.isAttending = false;
+        if (!includesID(currentUserID, outing.attendees)) { outing.isAttending = true; }
+
         // modify return data
         delete outing.community.members;
         outing.attendees = outing.attendees.length;
@@ -110,10 +128,10 @@ const getOuting = async (req, res) => {
         let epoch = new Date(0);
         if (outing.start.getTime() == epoch.getTime()) { outing.start = null; }
         if (outing.end.getTime() == epoch.getTime()) { outing.end = null; }
+        if (!outing.outingFile) { outing.outingFile = null; }
         // TODO
         // get poll options
         // get vote count for each option
-
 
         return res.status(200).json({
             sucess: true,
@@ -329,6 +347,13 @@ const getOutingComments = async (req, res) => {
             populate: {
                 path: 'profilePicture',
                 select: 'fileType',
+            }
+        });
+
+        // return null if no profile picture for each comment
+        comments.forEach( (comment) => {
+            if (!comment.owner.profilePicture) {
+                comment.owner.profilePicture = null;
             }
         });
 

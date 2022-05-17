@@ -726,7 +726,6 @@ const removeFriend = async (req, res) => {
 }
 
 // get current user's feed
-// TODO profile pic & HAS LIKED
 const getFeed = async (req, res) => {
     try {
         const currentUser = res.locals.username;
@@ -736,6 +735,12 @@ const getFeed = async (req, res) => {
 
         // get friends
         const user = await User.findById(currentUserID, 'friends communities');
+        if (!user) {
+            return res.status(500).json({
+                success: false,
+                msg: `Error: error getting current user info`,
+            });
+        }
         const friends = user.friends;
 
         // get posts from our friends

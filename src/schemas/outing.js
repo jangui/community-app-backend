@@ -32,6 +32,9 @@ const outingSchema = new Schema({
     // array of users that are interested
     interested: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingInterestee'}],
 
+    // the outings's picture
+    outingFile: {type: mongoose.Schema.Types.ObjectId, ref: 'StaticFile'},
+
     // array of comments for the outing
     comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'OutingComment'}],
 

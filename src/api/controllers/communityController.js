@@ -84,13 +84,17 @@ const getCommunity = async (req, res) => {
             });
         }
 
-        // set members to member count
-        community.members = community.members.length;
-
         // check if we own community
         community.isAdmin = false;
         if (includesID(currentUserID, community.owners)) { community.isAdmin = true; }
         delete community.owners;
+
+        // check if we are member of community
+        community.isMember = false;
+        if (includesID(currentUserID, community.members)) { community.isMember = true; }
+
+        // set members to member count
+        community.members = community.members.length;
 
         // return success
         return res.status(200).json({
@@ -796,13 +800,18 @@ const getOutings = async (req, res) => {
                 path: 'profilePicture',
                 select: 'fileType',
             }
-        }).sort(
+        }).populate(
+            'outingFile', 'fileType'
+        ).sort(
             { timestamp: -1 },
         ).skip(skip).limit(limit).lean();
 
         // modify return data
         let epoch = new Date(0);
         outings.forEach( (outing) => {
+            outing.isAttending = false;
+            if (includesID(currentUserID, outing.attendees)) { outing.isAttending = true; }
+            if (!outing.outingFile) { outing.outingFile = null; }
             outing.attendees = outing.attendees.length;
             outing.interested = outing.interested.length;
             outing.comments = outing.comments.length;
