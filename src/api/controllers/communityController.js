@@ -10,6 +10,7 @@ const createCommunity = async (req, res) => {
         const currentUser = res.locals.username;
         const currentUserID = res.locals.userID;
         const communityName = req.body.name;
+        console.log(communityName)
         const description = req.body.description;
         const open = req.body.open;
         const hidden = req.body.hidden;
@@ -95,6 +96,9 @@ const getCommunity = async (req, res) => {
 
         // set members to member count
         community.members = community.members.length;
+
+        // set community image to null if none
+        if (!community.communityImage) { community.communityImage = null; }
 
         // return success
         return res.status(200).json({
@@ -343,6 +347,13 @@ const getMembers = async (req, res) => {
             'members -_id'
         ).lean().populate({
             path: 'members',
+            select: 'profilePicture',
+            populate: {
+                path: 'profilePicture',
+                select: 'fileType'
+            },
+        }).populate({
+            path: 'members',
             select: 'username friends -_id',
             populate: {
                 path: 'friends',
@@ -364,7 +375,6 @@ const getMembers = async (req, res) => {
         // add friendship status to each member
         for (let i = 0; i < members.length; ++i) {
             const member = members[i]
-            if (member.username == currentUser) { delete member.friends; continue; }
             areFriends = false;
 
             for (let j = 0; j < member.friends.length; ++j) {
@@ -373,12 +383,65 @@ const getMembers = async (req, res) => {
             }
             member.areFriends = areFriends;
             delete member.friends
+
+            if (!member.profilePicture) { member.profilePicture = null; }
         }
 
         return res.status(200).json({
             success: true,
             msg: `successfully got members ${skip}-${limit+skip-1} for community '${communityName}'`,
             members: members,
+        });
+
+    } catch(err) {
+        return res.status(500).json({
+            success: false,
+            msg: `Error: ${err}`
+        });
+    }
+}
+
+// get member requets for community
+const getMemberRequests = async (req, res) => {
+    try {
+        const currentUser = res.locals.username;
+        const currentUserID = res.locals.userID;
+        const communityName = req.body.community;
+        const skip = parseInt(req.body.skip);
+        const limit = parseInt(req.body.limit);
+
+        // get community
+        const community = await Community.findOne(
+            { name: communityName },
+            'memberRequests owners -_id'
+        ).lean().populate({
+            path: 'memberRequests',
+            select: 'username profilePicture',
+            populate: {
+                path: 'profilePicture',
+                select: 'fileType'
+            },
+        });
+
+        // check if community exists
+        if (!community) {
+            return res.status(400).json({
+                success: false,
+                msg: `Error: ${communityName} does not exist.`
+            });
+        }
+
+        // slice members according to how many requests
+        requests = community.memberRequests.slice(skip, skip+limit);
+
+        requests.forEach( (member) => {
+            if (!member.profilePicture) { member.profilePicture = null; }
+        });
+
+        return res.status(200).json({
+            success: true,
+            msg: `successfully got member requests # ${skip}-${limit+skip-1} for community '${communityName}'`,
+            requests: requests,
         });
 
     } catch(err) {
@@ -544,7 +607,7 @@ const joinCommunity = async (req, res) => {
         const communityName = req.body.communityName;
 
         // check community exists
-        const community = await Community.findOne({name: communityName}, 'owner members open memberRequests').lean();
+        const community = await Community.findOne({name: communityName}, 'owners members open memberRequests').lean();
         if (!community) {
             return res.status(409).json({
                 success: false,
@@ -577,7 +640,7 @@ const joinCommunity = async (req, res) => {
 
             // create notification
             const notification = new Notification({
-                notifee: community.owner,
+                notifee: community.owners[0],
                 notifier: currentUserID,
                 referenceType: 1, // reference to community
                 referenceID: community._id,
@@ -800,6 +863,13 @@ const getOutings = async (req, res) => {
                 path: 'profilePicture',
                 select: 'fileType',
             }
+        }).populate({
+            path: 'attendees',
+            select: 'attendee',
+            populate: {
+                path: 'attendee',
+                select: 'username',
+            }
         }).populate(
             'outingFile', 'fileType'
         ).sort(
@@ -810,7 +880,10 @@ const getOutings = async (req, res) => {
         let epoch = new Date(0);
         outings.forEach( (outing) => {
             outing.isAttending = false;
-            if (includesID(currentUserID, outing.attendees)) { outing.isAttending = true; }
+            for (let i = 0; i < outing.attendees.length; ++i) {
+                if (outing.attendees[i].attendee._id.toString() == currentUserID) {outing.isAttending = true; break;}
+
+            }
             if (!outing.outingFile) { outing.outingFile = null; }
             outing.attendees = outing.attendees.length;
             outing.interested = outing.interested.length;
@@ -885,6 +958,7 @@ exports.editCommunity = editCommunity;
 exports.deleteCommunity = deleteCommunity;
 exports.getPosts = getPosts;
 exports.getMembers = getMembers;
+exports.getMemberRequests = getMemberRequests;
 exports.inviteUser = inviteUser;
 exports.acceptInvite = acceptInvite;
 exports.joinCommunity = joinCommunity;

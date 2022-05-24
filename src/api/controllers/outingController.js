@@ -21,6 +21,13 @@ const createOuting = async (req, res) => {
 
         // get community ID
         const community = await Community.findOne({name: communityName}, '_id members').lean();
+        if (!community) {
+            return res.status(409).json({
+                sucess: false,
+                msg: `Error community: '${communityName}' does not exist`
+            });
+        }
+
         const communityID = community._id;
 
         // check if we have permissions for posting outing
@@ -95,9 +102,17 @@ const getOuting = async (req, res) => {
                 path: 'profilePicture',
                 select: 'fileType',
             }
+        }).populate({
+            path: 'attendees',
+            select: 'attendee',
+            populate: {
+                path: 'attendee',
+                select: 'username',
+            }
         }).populate(
             'outingFile', 'fileType'
         ).lean();
+        console.log(outing.attendees)
 
         // check if outing exists
         if (!outing) {
@@ -117,7 +132,11 @@ const getOuting = async (req, res) => {
 
         // check if user is attending outing
         outing.isAttending = false;
-        if (!includesID(currentUserID, outing.attendees)) { outing.isAttending = true; }
+        for (let i = 0; i < outing.attendees.length; ++i) {
+            attendee = outing.attendees[i].attendee;
+            console.log(attendee._id, currentUserID)
+            if (attendee._id.toString() == currentUserID) { outing.isAttending = true; break;}
+        }
 
         // modify return data
         delete outing.community.members;
@@ -501,11 +520,19 @@ const getAttendees = async (req, res) => {
             // set like username and profile picture
             currentAttendee.username = currentAttendee.attendee.username;
             currentAttendee.profilePicture = currentAttendee.attendee.profilePicture;
+            if (!currentAttendee.profilePicture) { currentAttendee.profilePicture = null; }
+
+            // if current attendee is current user
+            if (currentAttendee.username == currentUser) {
+                currentAttendee.areFriends = null;
+                delete currentAttendee.attendee;
+                return;
+            }
 
             // check if user is friends with the friends of the attendee
             if (includesID(currentUserID, currentAttendee.attendee.friends)) {
                 currentAttendee.areFriends = true;
-                delete currentLike.attendee; // dont return current attendee's extra info
+                delete currentAttendee.attendee; // dont return current attendee's extra info
                 return;
             }
 
@@ -583,7 +610,7 @@ const attendOuting = async (req, res) => {
             notifee: currentUserID,
             notifier: outing.owner,
             referenceType: 3, // reference to a outing
-            referenceID: postID,
+            referenceID: outingID,
             notificationType: 1
         });
         await notification.save();

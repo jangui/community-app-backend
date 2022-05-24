@@ -7,6 +7,7 @@ const {
     deleteCommunity,
     getPosts,
     getMembers,
+    getMemberRequests,
     inviteUser,
     acceptInvite,
     joinCommunity,
@@ -35,6 +36,9 @@ router.route('/posts').post(getPosts);
 
 // get community members
 router.route('/members').post(getMembers);
+
+// get community member requests
+router.route('/member/requests').post(getMemberRequests);
 
 // invite user to community
 router.route('/invite').post(inviteUser);

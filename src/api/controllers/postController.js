@@ -646,6 +646,7 @@ const getLikes = async (req, res) => {
             if (userOwnsPost) {
                 currentLike.areFriends = true;
                 delete currentLike.owner; // dont return current like's owner's info
+                if (currentLike.username == currentUser) { currentLike.areFriends = null; }
                 return;
             }
 

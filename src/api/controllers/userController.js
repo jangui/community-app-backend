@@ -264,7 +264,14 @@ const getCommunities = async (req, res) => {
         const desiredUser = await User.findOne(
             {username: desiredUsername},
             'communities friends')
-        .lean().populate('communities', 'name open');
+        .lean().populate({
+            path: 'communities',
+            select: 'name description open hidden members owners communityImage',
+            populate: {
+                path: 'communityImage',
+                select: 'fileType'
+            }
+        });
         if (!(desiredUser)) {
             return res.status(400).json({
                 success: false,
@@ -282,6 +289,23 @@ const getCommunities = async (req, res) => {
 
         // slice communities according to skip and limit params
         const communities = desiredUser.communities.slice(skip, skip+limit);
+
+        // update info for communities
+        communities.forEach( (community) => {
+            console.log(community)
+            if (!community.communityImage) { community.communityImage = null; }
+
+            isAdmin = false;
+            if (includesID(currentUserID, community.owners)) { isAdmin = true; }
+            community.isAdmin = isAdmin;
+
+            isMember = false;
+            if (includesID(currentUserID, community.members)) { isMember = true; }
+            community.isMember = isMember;
+
+            community.members = community.members.length;
+            delete community.owners;
+        });
 
         return res.status(200).json({
             success: true,
@@ -554,7 +578,7 @@ const acceptFriendRequest = async (req, res) => {
             notifee: currentUserID,
             notifier: desiredUser._id,
             referenceType: 0, // reference to a user
-            referenceID: desiredUserID,
+            referenceID: desiredUser._id,
             notificationType: 0
         });
         await notification.save();
